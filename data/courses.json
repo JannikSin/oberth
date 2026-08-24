@@ -1,0 +1,179 @@
+{
+  "app": "oberth",
+  "version": 1,
+  "term": "Fall 2026",
+  "termStart": "2026-08-24",
+  "termEnd": "2026-12-11",
+  "generatedAt": "2026-08-24",
+  "source": "Five syllabi read 2026-08-24 (session guesthouse). Vault copies live in Crystal/Study/Courses/<CODE>/inbox/.",
+  "noClassDays": ["2026-09-07", "2026-10-12", "2026-10-13", "2026-11-25", "2026-11-26", "2026-11-27"],
+  "courses": [
+    {
+      "code": "ME27400", "short": "ME 274", "title": "Basic Mechanics II (Dynamics)", "credits": 4,
+      "accent": "tel",
+      "meets": [{ "days": ["MO","WE","FR"], "start": "10:30", "end": "11:20", "room": "HAMP 1144" }],
+      "instructor": { "name": "James Gibert", "email": "jgibert@purdue.edu" },
+      "officeHours": [
+        { "who": "Gibert (yours)", "days": ["MO","WE"], "start": "16:00", "end": "17:00", "room": "LMBS 1236" },
+        { "who": "Krousgrill", "days": ["MO","WE","FR"], "start": "13:45", "end": "15:00", "room": "ME 3061G" },
+        { "who": "Ghoshal", "days": ["MO","WE","FR"], "start": "15:45", "end": "17:00", "room": "WANG 4070" }
+      ],
+      "ohNote": "The syllabus permits attending ANY ME 274 instructor's hours, not only your own section's.",
+      "rules": [
+        { "id": "me274-hw", "label": "Homework, 2 problems", "byday": ["MO","WE"], "dueTime": "23:59",
+          "effortH": 1.5, "submit": "Gradescope", "late": "not accepted", "severity": "hard" }
+      ],
+      "drops": [{ "id": "me274-hw-drops", "label": "Homework drops", "total": 2 }],
+      "grading": "HW+quizzes 30% (capped, incl. bonus). Exams 70%: better of (midterm avg) vs final = 45%, worse = 25%. Straight scale, no curve.",
+      "exams": [],
+      "unknowns": [
+        "Two evening midterm dates. The topical schedule is NOT in the syllabus PDF.",
+        "Nine Friday quiz dates, same reason."
+      ],
+      "ai": "PROHIBITED on graded work. A correct method not taught in class is marked wrong anyway."
+    },
+    {
+      "code": "PHYS31000", "short": "PHYS 310", "title": "Modern Dynamics", "credits": 3,
+      "accent": "cliff", "risk": "highest",
+      "meets": [{ "days": ["MO","WE"], "start": "11:30", "end": "13:20", "room": "PHYS 203", "note": "syllabus says 12:45; myPurdue says 13:20, unresolved" }],
+      "instructor": { "name": "David Nolte", "email": "nolte@purdue.edu", "emailRule": "Subject line MUST contain \"Phys310\"." },
+      "officeHours": [{ "who": "Nolte", "days": ["TU"], "start": "10:00", "end": "11:00", "room": "PHYS 78",
+        "conflict": "PHYS 30600 lecture starts 10:30, so only 10:00-10:30 is usable." }],
+      "rules": [
+        { "id": "phys310-ps", "label": "Problem set", "byday": ["TU"], "dueTime": "23:59",
+          "effortH": 4, "submit": "Brightspace", "late": "1 pt/problem after solutions post", "severity": "soft" }
+      ],
+      "drops": [],
+      "grading": "HW 10%. Midterms 20% each. Final (cumulative) 30%. CURVED: ~20% A, ~40% B, ~30% C.",
+      "exams": [
+        { "id": "phys310-m1", "label": "Midterm 1", "date": "2026-09-21", "inClass": true },
+        { "id": "phys310-m2", "label": "Midterm 2", "date": "2026-10-26", "inClass": true },
+        { "id": "phys310-m3", "label": "Midterm 3", "date": "2026-11-23", "inClass": true }
+      ],
+      "unknowns": ["Final exam date TBA."],
+      "note": "90% of the grade is exams, curved, no drops. Midterm 1 on 2026-09-21 is the trigger date for the standing condition in Lanes/Academics.",
+      "ai": "Permitted on homework; the 10% weighting exists to acknowledge it."
+    },
+    {
+      "code": "PHYS30600", "short": "PHYS 306", "title": "Mathematical Methods of Physics I", "credits": 3,
+      "accent": "tel",
+      "meets": [{ "days": ["TU","TH"], "start": "10:30", "end": "11:45", "room": "PHYS 223" }],
+      "instructor": { "name": "Dimitrios Giannios", "email": "dgiannio@purdue.edu" },
+      "officeHours": [{ "who": "Giannios", "days": ["TU","TH"], "start": "11:45", "end": "12:15", "room": "PHYS 223",
+        "assumed": true, "note": "The syllabus says only \"after lectures\". Time and room are an assumption pending confirmation." }],
+      "rules": [
+        { "id": "phys306-hw", "label": "Homework", "dates": [
+            "2026-09-03","2026-09-10","2026-09-17","2026-10-01","2026-10-15",
+            "2026-10-22","2026-11-05","2026-11-12","2026-11-19","2026-12-03"],
+          "dueTime": "23:59", "effortH": 2, "submit": "Brightspace",
+          "late": "25% penalty; excessively late not accepted", "severity": "medium" }
+      ],
+      "drops": [],
+      "grading": "Quizzes 10%, HW 20%, Midterm 30%, Final 40%. A 94 / B 84 (both a point harsher than standard).",
+      "exams": [{ "id": "phys306-mid", "label": "Midterm", "date": "2026-10-19", "start": "20:00", "end": "22:00", "room": "SMTH 108" }],
+      "freebie": "~10 in-class quizzes are 10% of the grade and a WRONG answer still earns full credit. Only absence scores zero.",
+      "ai": "Explicitly encouraged as a tutor."
+    },
+    {
+      "code": "MFET16300", "short": "MFET 163", "title": "Foundations in Geometric Modeling and Data Management", "credits": 2,
+      "accent": "burn",
+      "meets": [
+        { "days": ["MO"], "start": "08:30", "end": "09:20", "room": "BHEE 129", "kind": "lecture" },
+        { "days": ["TU"], "start": "15:30", "end": "17:20", "room": "PHYS 022", "kind": "lab" }
+      ],
+      "instructor": { "name": "Travis Fuerst", "email": "fuerstt@purdue.edu", "note": "By appointment only, via the MFET Help Form." },
+      "officeHours": [{ "who": "TAs", "days": ["MO","TU","WE","TH"], "start": "17:30", "end": "19:30", "room": "PHYS 022" }],
+      "rules": [
+        { "id": "mfet-lab", "label": "Lab assignment", "byday": ["TU"], "dueTime": "06:59",
+          "effortH": 1.5, "submit": "Teamcenter or Brightspace", "late": "FLAT ZERO", "severity": "flatzero",
+          "note": "Due 6:59 AM on the lab day, so the real deadline is Monday night, and Monday has no usable gap. This burns Sunday." },
+        { "id": "mfet-quiz", "label": "Chapter quiz", "byday": ["TU"], "dueTime": "06:59",
+          "effortH": 0.3, "submit": "publisher site", "late": "zero", "severity": "hard",
+          "note": "Unlimited attempts, but only the highest of the FIRST TWO is recorded." },
+        { "id": "mfet-prep", "label": "Lab prep video quiz", "byday": ["TU"], "dueTime": "06:59",
+          "effortH": 0.2, "submit": "Brightspace", "late": "zero", "severity": "hard" }
+      ],
+      "drops": [
+        { "id": "mfet-assign-drops", "label": "Assignment drops", "total": 2 },
+        { "id": "mfet-quiz-drops", "label": "Quiz drops", "total": 2 }
+      ],
+      "cliffs": [
+        { "id": "mfet-lecture-zeros", "label": "Lecture quiz zeros", "limit": 4,
+          "atLimit": "course capped at C", "overLimit": "automatic failure" },
+        { "id": "mfet-lab-absences", "label": "Lab absences", "limit": 4,
+          "atLimit": "course capped at C", "overLimit": "automatic failure" },
+        { "id": "mfet-prep-zeros", "label": "Lab prep quiz zeros", "limit": 4,
+          "atLimit": "course capped at C", "overLimit": "automatic failure" }
+      ],
+      "grading": "Assignments 25, Project 25, Exam+Practicals 25, Quizzes 15, Lecture attend 5, Prep video 2.5, Lab attend 2.5.",
+      "exams": [
+        { "id": "mfet-e1", "label": "Exam 1 + Practical 1", "date": "2026-09-26", "note": "available from" },
+        { "id": "mfet-e2", "label": "Exam 2", "date": "2026-12-01", "note": "available 16-Nov, DUE 1-Dec" }
+      ],
+      "extraCredit": "One assignment at the end for proof of completing the course evaluation.",
+      "ai": "PROHIBITED on deliverables. The course's own Orbit assistant is permitted and reviewed."
+    },
+    {
+      "code": "ME26400", "short": "ME 264", "title": "Introduction to Manufacturing for Mechanical Design", "credits": 3,
+      "accent": "tel",
+      "meets": [
+        { "days": ["TU","TH"], "start": "09:30", "end": "10:20", "room": "BHEE 129", "kind": "lecture" },
+        { "days": ["MO"], "start": "14:30", "end": "17:20", "room": "ME G009", "kind": "lab", "section": "Lab 18" }
+      ],
+      "instructor": { "name": "Jun / Sealy / Shin", "email": "mbgjun@purdue.edu", "note": "ALL office hours are by appointment only. There is no fixed block." },
+      "officeHours": [],
+      "rules": [
+        { "id": "me264-prelab", "label": "Prelab", "byday": ["MO"], "dueTime": "14:30",
+          "effortH": 0.5, "submit": "Brightspace", "late": "zero unless excused", "severity": "hard" },
+        { "id": "me264-memo", "label": "Lab memo / report", "byday": ["MO"], "dueTime": "14:30",
+          "effortH": 2, "submit": "Brightspace", "late": "10%/day up to a week", "severity": "medium",
+          "note": "Due at the START of the FOLLOWING week's lab, so each Monday lab emits a deliverable due the next Monday." }
+      ],
+      "drops": [],
+      "gate": "You must complete BOTH labs and projects to pass this course. Binary, not weighted.",
+      "grading": "Memos/worksheets 30, Reports+presentation 40, HW+quizzes 15, Prelabs 10, Participation 5. NO exams.",
+      "milestones": [
+        { "id": "me264-gantt", "label": "Gantt Chart Memo (team)", "date": "2026-10-28", "effortH": 2 },
+        { "id": "me264-concept", "label": "Concept Generation + Down Selection Memo (team)", "date": "2026-11-04", "effortH": 2.5 },
+        { "id": "me264-drawings", "label": "Drawings + DFA + Mfg Ops Sheets (team)", "date": "2026-11-14", "effortH": 4 },
+        { "id": "me264-final", "label": "Final presentation + report", "date": "2026-12-07", "effortH": 6 }
+      ],
+      "labRotation": [
+        { "week": "2026-08-24", "what": "Intro, group activity, safety quizzes" },
+        { "week": "2026-08-31", "what": "No lab" },
+        { "week": "2026-09-07", "what": "No lab (Labor Day)" },
+        { "week": "2026-09-14", "what": "Sheet Metal / Wood" },
+        { "week": "2026-09-21", "what": "Machining / Metrology" },
+        { "week": "2026-09-28", "what": "Metrology / Machining" },
+        { "week": "2026-10-05", "what": "CNC Mill (POTR 333)" },
+        { "week": "2026-10-12", "what": "No lab (Fall Break)" },
+        { "week": "2026-10-19", "what": "CNC Lathe (POTR 333)" },
+        { "week": "2026-10-26", "what": "Wood / Sheet Metal" },
+        { "week": "2026-11-02", "what": "Clock Box" },
+        { "week": "2026-11-09", "what": "Electronics" },
+        { "week": "2026-11-16", "what": "Project work" },
+        { "week": "2026-11-23", "what": "No lab (Thanksgiving)" },
+        { "week": "2026-11-30", "what": "Project work" },
+        { "week": "2026-12-07", "what": "Final presentations" }
+      ],
+      "extraCredit": "Early presenters in Week 15 (Dec 1-3).",
+      "ai": "Permitted, but requires a 100-200 word justification page appended to the assignment plus a citation."
+    }
+  ],
+  "commitments": [
+    { "code": "PACC", "short": "PACC", "title": "Parkour + Calisthenics Club", "accent": "tel",
+      "meets": [
+        { "days": ["MO"], "start": "18:30", "end": "20:00", "room": "WALC" },
+        { "days": ["TH"], "start": "18:30", "end": "20:00", "room": "WALC", "note": "bar level 1, the muscle-up session" }
+      ] },
+    { "code": "GYM", "short": "Gym", "title": "Training", "accent": "tel",
+      "meets": [{ "days": ["MO","TU","WE","TH","FR"], "start": "07:00", "end": "08:15", "room": "" }],
+      "note": "David 2026-08-24: 'gym is always in the morning so it doesn't conflict with anything.' Modelled so the scheduler never proposes a 7am burn." }
+  ],
+  "missingCourses": [
+    { "code": "ME29000", "short": "ME 290", "title": "Global Engineering Professional Seminar",
+      "meets": [{ "days": ["TU"], "start": "13:30", "end": "14:20", "room": "PHYS 112" }], "syllabus": "NOT OBTAINED" },
+    { "code": "EPCS20100", "short": "EPICS", "title": "EPICS",
+      "meets": [{ "days": ["WE"], "start": "18:00", "end": "19:50", "room": "LMBS 3239A" }], "syllabus": "NOT OBTAINED" }
+  ]
+}

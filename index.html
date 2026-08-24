@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oberth</title>
+<!-- Self-contained. Every asset is local; the only outbound connection is the
+     private Worker. No inline script (the SW registers from app.js), no remote
+     fonts, no CDN, no base tag. DIN ships with iOS and Windows, so the type
+     costs no network at all. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://oberth.janniksin.workers.dev; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#0B1016" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#E8EDF2" media="(prefers-color-scheme: light)">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./app.css">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+<div class="wrap" id="root"></div>
+
+<!-- The tab bar is a readout, not a dock: condensed DIN caps on a panel with a
+     single hairline, and the active tab is marked by an amber burn tick rather
+     than a filled pill. Five slots, sized so a sixth still fits at 375pt. -->
+<nav id="tabbar" aria-label="Sections" hidden>
+  <button type="button" data-tab="tonight" aria-current="false"><span class="tk"></span>Tonight</button>
+  <button type="button" data-tab="track" aria-current="false"><span class="tk"></span>Track</button>
+  <button type="button" data-tab="study" aria-current="false"><span class="tk"></span>Study</button>
+  <button type="button" data-tab="courses" aria-current="false"><span class="tk"></span>Courses</button>
+  <button type="button" data-tab="career" aria-current="false"><span class="tk"></span>Career</button>
+</nav>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

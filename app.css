@@ -1,0 +1,374 @@
+/* ============================================================================
+   OBERTH stylesheet.
+
+   Named for Hermann Oberth and the Oberth effect: a burn is worth more at
+   periapsis, where you are deepest in the well and moving fastest. The same
+   hour of work is worth more at the right moment. That is the whole thesis and
+   the interface is built to say it.
+
+   THE TYPE IS THE ARGUMENT. DIN is the Deutsches Institut fuer Normung
+   standard face, the literal German engineering typeface, for an app named
+   after a German rocket pioneer. DIN Condensed ships on iOS, Bahnschrift on
+   Windows, so the chrome costs zero network. Long-form transcribed notes drop
+   to system-ui on purpose: chrome reads as INSTRUMENT, content reads as TEXT.
+
+   Dark is primary. Light is a daylight panel mode, not a different brand.
+
+   LAYOUT LANGUAGE per tab, deliberately unlike each other:
+     TONIGHT   the log book    two ruled lanes, a recording bar, timestamps
+     TRACK     the trajectory  the periapsis rail, burn markers on a curve
+     STUDY     the burn card   one card at a time, full bleed, two verdicts
+     COURSES   the panel       fixed data, gauge rows, cliff counters
+     CAREER    the manifest    dated rows, status ticks, no ornament
+
+   Nothing in here is a rounded card on a warm ground. That is Crystal.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- tokens -- */
+:root{
+  color-scheme: dark light;
+
+  /* DIN for every piece of chrome. The condensed cut carries headers and the
+     tab readout; the alternate cut carries labels and numerals. */
+  --din: "DIN Condensed", "Bahnschrift Condensed", "Bahnschrift SemiCondensed", "DIN Alternate", "Oswald", ui-sans-serif, system-ui, sans-serif;
+  --din-alt: "DIN Alternate", "Bahnschrift", "DIN Condensed", ui-sans-serif, system-ui, sans-serif;
+  --text: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* A backlit instrument panel, not a void. Blue-black, never pure #000. */
+  --void:#0B1016;
+  --panel:#121A23;
+  --panel-2:#18222D;
+  --grid:#1C2733;
+  --rule:#243141;
+  --ink:#DCE6F0;
+  --dim:#8496A8;
+  --faint:#5A6B7D;
+
+  /* AMBER IS IGNITION AND NOTHING ELSE. If it is amber, it is a moment to act.
+     Spend it nowhere decorative or it stops meaning anything. */
+  --burn:#FFA524;
+  --burn-soft:rgba(255,165,36,.14);
+  --burn-edge:rgba(255,165,36,.42);
+
+  /* Cyan is telemetry: secondary data, links, things that are merely true. */
+  --tel:#4FC3E8;
+  --tel-soft:rgba(79,195,232,.13);
+
+  /* Red is reserved for the two real cliffs: the MFET attendance cap and any
+     flat-zero deadline. Never for ordinary lateness. */
+  --cliff:#FF5B49;
+  --cliff-soft:rgba(255,91,73,.15);
+
+  --good:#4FD08A;
+  --shadow:0 1px 0 rgba(255,255,255,.03), 0 8px 24px rgba(0,0,0,.45);
+  --glass:rgba(11,16,22,.88);
+  --tap:44px;
+}
+
+@media (prefers-color-scheme: light){
+  :root{
+    --void:#E8EDF2;
+    --panel:#FBFCFD;
+    --panel-2:#F1F5F8;
+    --grid:#D8E0E8;
+    --rule:#C6D2DC;
+    --ink:#16202B;
+    --dim:#5A6B7D;
+    --faint:#8496A8;
+    --burn:#B96A00;
+    --burn-soft:rgba(185,106,0,.11);
+    --burn-edge:rgba(185,106,0,.38);
+    --tel:#0F6E92;
+    --tel-soft:rgba(15,110,146,.10);
+    --cliff:#C22D1C;
+    --cliff-soft:rgba(194,45,28,.10);
+    --good:#1B7A48;
+    --shadow:0 1px 0 rgba(0,0,0,.02), 0 6px 18px rgba(22,32,43,.08);
+    --glass:rgba(232,237,242,.9);
+  }
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--void);
+  color:var(--ink);
+  font-family:var(--text);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+  /* The graph grid. Faint enough to read as engineering paper rather than as a
+     table, and it sits UNDER everything so panels float on a measured field. */
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:56px 56px, 56px 56px;
+  background-position:-1px -1px;
+}
+.wrap{
+  max-width:720px;
+  margin:0 auto;
+  padding:0 16px calc(88px + env(safe-area-inset-bottom));
+}
+
+/* ------------------------------------------------------------ typography -- */
+h1,h2,h3{font-family:var(--din);font-weight:400;margin:0;letter-spacing:.02em;}
+h1{font-size:2.1rem;line-height:1.05;text-transform:uppercase;}
+h2{font-size:1.25rem;line-height:1.1;text-transform:uppercase;letter-spacing:.06em;}
+h3{font-size:1rem;line-height:1.2;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);}
+
+.eyebrow{
+  font-family:var(--din-alt);font-size:.7rem;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--faint);
+}
+.num{font-family:var(--din-alt);font-variant-numeric:tabular-nums;letter-spacing:.01em;}
+.mono{font-family:var(--mono);font-size:.8rem;}
+a{color:var(--tel);text-underline-offset:3px;}
+
+/* ---------------------------------------------------------------- header -- */
+.mast{
+  padding:22px 0 14px;
+  border-bottom:1px solid var(--rule);
+  margin-bottom:18px;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+}
+.mast .l{min-width:0;}
+.mast .sub{font-family:var(--din-alt);font-size:.78rem;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;margin-top:4px;}
+/* The altitude readout: a live telemetry line, right-aligned, always numbers. */
+.mast .alt{font-family:var(--din-alt);font-size:.72rem;color:var(--faint);text-align:right;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
+.mast .alt b{display:block;font-size:1.5rem;color:var(--ink);letter-spacing:0;font-weight:400;}
+
+/* ------------------------------------------------------ the periapsis rail --
+   The signature. Altitude = how committed the hours are. The curve dips where
+   the day opens up, and an amber burn marker sits at the dip. A day that never
+   reaches periapsis (Monday) shows a flat high arc and no marker, which is the
+   whole point: there is nowhere to burn, so the work has to move.            */
+.rail{
+  position:relative;
+  background:var(--panel);
+  border:1px solid var(--rule);
+  border-radius:2px;
+  padding:0;
+  margin:0 0 20px;
+  overflow:hidden;
+}
+.rail svg{display:block;width:100%;height:132px;}
+.rail .rail-x{
+  display:flex;justify-content:space-between;
+  padding:0 10px 8px;
+  font-family:var(--din-alt);font-size:.62rem;letter-spacing:.14em;
+  color:var(--faint);text-transform:uppercase;
+}
+.rail .trace{fill:none;stroke:var(--tel);stroke-width:1.5;opacity:.75;}
+.rail .fill{fill:var(--tel-soft);stroke:none;}
+.rail .gridline{stroke:var(--grid);stroke-width:1;}
+.rail .burn{fill:var(--burn);}
+.rail .burnstem{stroke:var(--burn-edge);stroke-width:1;stroke-dasharray:2 3;}
+.rail .burnlabel{font-family:var(--din-alt);font-size:9px;fill:var(--burn);letter-spacing:.1em;text-transform:uppercase;}
+.rail .nowline{stroke:var(--ink);stroke-width:1;opacity:.5;}
+
+/* --------------------------------------------------------------- surfaces --
+   Panels, not cards: square corners, one hairline, no drop shadow bloom. The
+   left edge carries the meaning colour so a row is readable at a glance. */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--rule);
+  border-left:2px solid var(--rule);
+  border-radius:2px;
+  padding:14px 16px;
+  margin:0 0 12px;
+}
+.panel.is-burn{border-left-color:var(--burn);}
+.panel.is-cliff{border-left-color:var(--cliff);background:linear-gradient(90deg,var(--cliff-soft),transparent 60%);}
+.panel.is-tel{border-left-color:var(--tel);}
+.panel .ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px;}
+.panel .pt{font-family:var(--din);font-size:1.05rem;letter-spacing:.03em;text-transform:uppercase;}
+.panel .pm{font-family:var(--din-alt);font-size:.7rem;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;white-space:nowrap;}
+.panel p{margin:6px 0 0;font-size:.94rem;color:var(--dim);}
+
+/* Section rule: a labelled hairline, the way a drawing separates zones. */
+.zone{display:flex;align-items:center;gap:12px;margin:26px 0 12px;}
+.zone::after{content:"";flex:1;height:1px;background:var(--rule);}
+.zone span{font-family:var(--din-alt);font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);}
+
+/* ------------------------------------------------------------- TONIGHT ----
+   The log book. Two ruled lanes, because there are two physical notebooks and
+   conflating them would lose the distinction that makes the whole thing work. */
+.lanes{display:grid;gap:12px;}
+.lane{
+  background:var(--panel);
+  border:1px solid var(--rule);
+  border-top:2px solid var(--rule);
+  border-radius:2px;
+  padding:0;
+  overflow:hidden;
+}
+.lane.lecture{border-top-color:var(--tel);}
+.lane.updates{border-top-color:var(--burn);}
+.lane .lh{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 14px;border-bottom:1px solid var(--rule);
+}
+.lane .lname{font-family:var(--din);font-size:1.05rem;letter-spacing:.05em;text-transform:uppercase;}
+.lane .lhint{font-family:var(--din-alt);font-size:.66rem;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;}
+.lane .lbody{padding:12px 14px 14px;}
+.lane textarea{
+  width:100%;min-height:96px;resize:none;
+  background:var(--panel-2);color:var(--ink);
+  border:1px solid var(--rule);border-radius:2px;
+  padding:11px 12px;font-family:var(--text);font-size:.95rem;line-height:1.55;
+}
+.lane textarea::placeholder{color:var(--faint);}
+.lane textarea:focus{outline:2px solid var(--tel);outline-offset:1px;}
+
+/* The recording bar. Recording is the primary act here, so it is a full-width
+   control with a live elapsed readout, not a small icon. */
+.recbar{display:flex;gap:8px;margin-top:10px;align-items:stretch;}
+.recbtn{
+  flex:1;min-height:var(--tap);
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  background:transparent;color:var(--ink);
+  border:1px solid var(--rule);border-radius:2px;
+  font-family:var(--din);font-size:1rem;letter-spacing:.12em;text-transform:uppercase;
+  cursor:pointer;
+}
+.recbtn:hover{border-color:var(--dim);}
+.recbtn .dot{width:10px;height:10px;border-radius:50%;background:var(--cliff);flex:none;}
+.recbtn[data-on="1"]{border-color:var(--cliff);color:var(--cliff);background:var(--cliff-soft);}
+.recbtn[data-on="1"] .dot{animation:pulse 1.15s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+.recbtn .el{font-family:var(--mono);font-size:.82rem;letter-spacing:0;color:var(--dim);}
+.savebtn{
+  min-width:104px;min-height:var(--tap);
+  background:var(--burn);color:#14100A;border:none;border-radius:2px;
+  font-family:var(--din);font-size:1rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;
+}
+.savebtn:disabled{opacity:.35;cursor:default;}
+
+/* Entries already logged tonight: timestamped, ruled, terse. */
+.logrow{
+  display:grid;grid-template-columns:64px 1fr;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--rule);
+}
+.logrow:last-child{border-bottom:none;}
+.logrow .t{font-family:var(--mono);font-size:.72rem;color:var(--faint);padding-top:2px;}
+.logrow .x{font-size:.92rem;color:var(--dim);overflow-wrap:anywhere;}
+
+/* --------------------------------------------------------------- STUDY ----
+   One card, full bleed, two verdicts. No deck browser in the review path. */
+.card{
+  background:var(--panel);border:1px solid var(--rule);border-radius:2px;
+  min-height:210px;display:flex;flex-direction:column;justify-content:center;
+  padding:26px 20px;margin-bottom:14px;text-align:center;
+}
+.card .q{font-family:var(--din);font-size:1.6rem;line-height:1.15;letter-spacing:.02em;}
+.card .a{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule);font-size:1rem;color:var(--dim);text-align:left;}
+.verdicts{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.verdicts button{
+  min-height:52px;border-radius:2px;cursor:pointer;
+  font-family:var(--din);font-size:1.05rem;letter-spacing:.12em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--rule);color:var(--ink);
+}
+.verdicts .again{border-color:var(--cliff);color:var(--cliff);}
+.verdicts .good{border-color:var(--good);color:var(--good);}
+
+/* -------------------------------------------------------------- COURSES ----
+   The panel: fixed data and gauges. A gauge is a bar of discrete pips, because
+   drops and absences are COUNTABLE and a percentage would lie about that.    */
+.gauge{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule);}
+.gauge:last-child{border-bottom:none;}
+.gauge .gl{flex:1;font-family:var(--din-alt);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);}
+.pips{display:flex;gap:4px;}
+.pip{width:13px;height:13px;border:1px solid var(--rule);border-radius:1px;}
+.pip.spent{background:var(--dim);border-color:var(--dim);}
+.pip.danger{background:var(--cliff);border-color:var(--cliff);}
+.gauge .gv{font-family:var(--din-alt);font-size:.72rem;color:var(--faint);letter-spacing:.06em;min-width:64px;text-align:right;text-transform:uppercase;}
+
+/* --------------------------------------------------------------- tabbar ----
+   A readout, not a dock. Condensed caps, an amber burn tick over the active
+   slot, one hairline. No icons: five words are faster to read than five
+   glyphs, and it keeps the bar unlike anything else in the fleet.            */
+#tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  display:flex;
+  background:var(--glass);
+  backdrop-filter:saturate(1.4) blur(14px);
+  -webkit-backdrop-filter:saturate(1.4) blur(14px);
+  border-top:1px solid var(--rule);
+  padding:0 4px calc(env(safe-area-inset-bottom));
+}
+#tabbar button{
+  flex:1;min-height:56px;padding:10px 2px 8px;
+  position:relative;
+  background:none;border:none;cursor:pointer;
+  font-family:var(--din);font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);
+}
+#tabbar button .tk{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:0;height:2px;background:var(--burn);transition:width .16s ease;
+}
+#tabbar button[aria-current="true"]{color:var(--ink);}
+#tabbar button[aria-current="true"] .tk{width:26px;}
+
+/* ---------------------------------------------------- the improvement bubble
+   David asked for the improvement notes on this app too. Same idea as Crystal's
+   bubble and the same offline FIFO, but it is a square instrument key here, not
+   a round mirror, and it says what it does.                                  */
+.bubble{
+  position:fixed;right:14px;bottom:calc(70px + env(safe-area-inset-bottom));z-index:45;
+  width:50px;height:50px;border-radius:2px;
+  background:var(--panel);border:1px solid var(--burn-edge);color:var(--burn);
+  font-family:var(--din);font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;
+  cursor:pointer;box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:center;line-height:1.05;
+}
+.bubblepanel{
+  position:fixed;left:12px;right:12px;bottom:calc(128px + env(safe-area-inset-bottom));z-index:46;
+  background:var(--panel);border:1px solid var(--rule);border-top:2px solid var(--burn);
+  border-radius:2px;padding:12px;box-shadow:var(--shadow);
+}
+.bubblepanel textarea{
+  width:100%;min-height:84px;max-height:40vh;resize:none;
+  background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:2px;
+  padding:10px 11px;font-family:var(--text);font-size:.95rem;
+}
+.bubblepanel .row{display:flex;gap:8px;align-items:center;margin-top:9px;}
+.bubblepanel .stat{flex:1;font-family:var(--din-alt);font-size:.68rem;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;}
+.bubblepanel .send{
+  min-height:38px;padding:0 16px;border:none;border-radius:2px;cursor:pointer;
+  background:var(--burn);color:#14100A;
+  font-family:var(--din);font-size:.9rem;letter-spacing:.12em;text-transform:uppercase;
+}
+
+/* ------------------------------------------------------------- key screen -- */
+.keyscreen{max-width:420px;margin:16vh auto;padding:0 20px;text-align:center;}
+.keyscreen .brand{font-family:var(--din);font-size:3.2rem;letter-spacing:.16em;text-transform:uppercase;line-height:1;}
+.keyscreen .tag{font-family:var(--din-alt);font-size:.72rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;margin:10px 0 26px;}
+.keyscreen input{
+  width:100%;min-height:var(--tap);padding:0 12px;
+  background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:2px;
+  font-family:var(--mono);font-size:.95rem;text-align:center;
+}
+.keyscreen button{
+  width:100%;min-height:var(--tap);margin-top:10px;border:none;border-radius:2px;cursor:pointer;
+  background:var(--burn);color:#14100A;font-family:var(--din);font-size:1.05rem;letter-spacing:.14em;text-transform:uppercase;
+}
+.keyscreen .err{color:var(--cliff);font-size:.85rem;margin-top:10px;min-height:1.2em;}
+
+/* ------------------------------------------------------------------ misc --- */
+.empty{padding:34px 8px;text-align:center;color:var(--faint);}
+.empty .g{font-family:var(--din);font-size:2.4rem;letter-spacing:.1em;color:var(--rule);}
+.empty h3{margin:10px 0 6px;color:var(--dim);}
+.empty p{margin:0;font-size:.9rem;}
+.foot{margin:30px 0 10px;padding-top:12px;border-top:1px solid var(--rule);
+  font-family:var(--din-alt);font-size:.66rem;letter-spacing:.12em;color:var(--faint);
+  text-transform:uppercase;display:flex;justify-content:space-between;gap:10px;}
+.syncline{font-family:var(--din-alt);font-size:.66rem;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;}
+
+:focus-visible{outline:2px solid var(--burn);outline-offset:2px;}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+}

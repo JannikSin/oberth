@@ -1,0 +1,8 @@
+{
+  "app": "oberth",
+  "version": 1,
+  "generatedAt": null,
+  "note": "Decks are GENERATED from the lecture notebook transcriptions, never hand-authored. Empty is the correct state until a night has been read aloud. Seeding this with invented physics would be worse than empty: a card he studies from has to be right.",
+  "decks": [],
+  "cards": []
+}
