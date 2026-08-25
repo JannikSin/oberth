@@ -1,0 +1,24 @@
+name = "oberth"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+account_id = "bd5fef067bffb5780b2fd25770606075"
+workers_dev = true
+# one live origin only, same policy as the crystal-brief and mise workers
+preview_urls = false
+
+# Secrets, set via `npx wrangler secret put`, NEVER written here:
+#   OBERTH_KEY     the laptop key. Everything, including draining /nudge and
+#                  pushing /career. Must never leave the laptop.
+#   OBERTH_KEYS    optional, comma separated rotation set.
+#   PHONE_KEY      the phone key. GET what it renders, POST only what he taps.
+#   PHONE_KEYS     optional, comma separated rotation set.
+#   GROQ_API_KEY   whisper-large-v3-turbo for read-aloud transcription.
+#
+# Rotation: put the new key in the PLURAL, cut over, then drop the old from the
+# singular. Both are read, so the plural can stay unset day to day.
+
+[[kv_namespaces]]
+binding = "STORE"
+# Oberth's OWN namespace. The pre-existing "STORE" namespace belongs to
+# crystal-brief; sharing it would put Oberth's notes in Crystal's keyspace.
+id = "642380548905422f98e7f8c020918365"
