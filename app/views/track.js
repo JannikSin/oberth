@@ -1,198 +1,220 @@
-// track.js: the trajectory. The signature view and the thesis of the app.
+// track.js: the day. One day at a time, arrows either side.
 //
-// Altitude is how committed each slice of the day is, discounted by how good
-// those hours actually are. The curve dips where the day opens up, and an amber
-// BURN MARKER sits where work should start. A day that never really dips
-// (Monday: MFET 08:30, ME 274 10:30, PHYS 310 until 13:20, three-hour lab until
-// 17:20, PACC 18:30) shows a high flat arc, and that is the answer, not a
-// failure: there is nowhere good to burn, so the work has to move to Sunday.
+// ============================================================================
+// THE RAIL IS GONE. David, 2026-08-25: "it has some graph at the top that
+// means nothing to me."
 //
-// This is why the app is called Oberth. A burn is worth more at periapsis.
+// The periapsis trajectory was my idea, not his need. It was the signature
+// element of the design and it turned out to be decoration, sitting at the top
+// of the tab he opens daily and pushing the actual answer below the fold. The
+// scheduling model underneath it survives and still decides WHEN to start
+// things; only the picture is gone. If a thing cannot be read at a glance by
+// the one person who uses it, it is not an instrument, it is an ornament.
+// ============================================================================
+//
+// What he asked for instead: the day, arrows to step between days, that day's
+// recurring assignments, and the updates captured that day.
 
-import { el, esc, mast, zone, footer, empty, todayIso, fmtDay, runway, courses } from "../../core.js";
+import {
+  el, esc, zone, footer, empty, todayIso, fmtDay, runway, courses,
+  K, lsGet, api,
+} from "../../core.js";
 import * as S from "../schedule.js";
 
-const load = () => courses();
+const isHere = () => location.hash.replace(/^#\/?/, "").split("/")[0] === "track";
+const logKey = (d) => K("log." + d);
 
 export function open(parts) {
   const root = document.getElementById("root");
-  const day = (parts && parts[1]) || todayIso();
-  load().then((data) => {
-    if (!isStill()) return;
+  const day = (parts && parts[1] && /^\d{4}-\d{2}-\d{2}$/.test(parts[1])) ? parts[1] : todayIso();
+
+  courses().then((data) => {
+    if (!isHere()) return;
     root.innerHTML = "";
     const wrap = document.createElement("div");
 
-    const horizon = S.addDays(day, 13);
-    const items = S.expand(data, day, horizon);
+    // A fortnight is enough to place anything; the backward pass never needs
+    // more, and expanding further costs time on every render.
+    const items = S.expand(data, day, S.addDays(day, 13));
     const planned = S.plan(data, items, null, day);
 
-    // Everything whose FIRST block is today or already past: the honest answer
-    // to "what must I start now so nothing lands late."
-    const startingNow = planned.filter((p) =>
-      p.effortMin > 0 && p.schedule.lst && p.schedule.lst.date <= day);
+    const dueToday = planned.filter((p) => p.due === day);
+    const startToday = planned.filter((p) =>
+      p.effortMin > 0 && p.due !== day &&
+      p.schedule.blocks.some((b) => b.date === day));
+    const capH = (S.capacityOn(data, day) / 60).toFixed(1);
 
-    const traj = S.trajectory(data, day, null,
-      planned.flatMap((p) => p.schedule.blocks.map((b) => Object.assign({}, b, { label: p.short }))));
+    wrap.appendChild(dayNav(day, capH));
 
-    const capH = (traj.capacityMin / 60).toFixed(1);
-    wrap.appendChild(mast("Track", fmtDay(day), "usable hrs", capH));
-
-    wrap.appendChild(rail(traj));
-
-    // The periapsis readout, in words.
-    const p = el("div", { class: "panel " + (traj.periapsis ? "is-burn" : "is-cliff") });
-    const ph = el("div", { class: "ph" });
-    ph.appendChild(el("span", { class: "pt" }, traj.periapsis ? "Periapsis" : "No periapsis"));
-    ph.appendChild(el("span", { class: "pm" }, traj.periapsis
-      ? esc(traj.periapsis.start + " – " + traj.periapsis.end)
-      : "flat arc"));
-    p.appendChild(ph);
-    p.appendChild(el("p", null, traj.periapsis
-      ? "Deepest free stretch today, " + Math.round(traj.periapsis.minutes / 60 * 10) / 10 +
-        "h wall clock, worth " + Math.round(traj.periapsis.value / 60 * 10) / 10 + "h of real work. Burn here."
-      : "Today never opens up. Anything due tomorrow had to start yesterday."));
-    wrap.appendChild(p);
-
-    wrap.appendChild(zone("start now"));
-    if (!startingNow.length) {
-      wrap.appendChild(empty("—", "Nothing has to start today", "Every deliverable in the next two weeks still has slack. The next one is listed below."));
+    wrap.appendChild(zone("due " + (day === todayIso() ? "today" : "this day")));
+    if (!dueToday.length) {
+      wrap.appendChild(empty("—", "Nothing due", "No deliverable lands on this day."));
     }
-    startingNow.forEach((it) => wrap.appendChild(deliverable(it, day, true)));
+    dueToday.forEach((it) => wrap.appendChild(row(it, day, true)));
 
-    wrap.appendChild(zone("inbound"));
-    const inbound = planned.filter((p2) => !startingNow.includes(p2)).slice(0, 14);
-    if (!inbound.length) wrap.appendChild(empty("—", "Clear", "Nothing scheduled in the next fortnight."));
-    inbound.forEach((it) => wrap.appendChild(deliverable(it, day, false)));
+    wrap.appendChild(zone("work this day"));
+    if (!startToday.length) {
+      wrap.appendChild(empty("—", "No work scheduled", "Nothing due later needs to start on this day."));
+    }
+    startToday.forEach((it) => wrap.appendChild(row(it, day, false)));
+
+    wrap.appendChild(zone("updates"));
+    wrap.appendChild(updatesPanel(day));
+
+    wrap.appendChild(zone("classes"));
+    wrap.appendChild(classesPanel(data, day));
 
     wrap.appendChild(footer());
     root.appendChild(wrap);
+
+    // Swipe as well as tap. A day view that only moves by hitting a small
+    // arrow is a day view he will not step through.
+    let x0 = null;
+    wrap.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    wrap.addEventListener("touchend", (e) => {
+      if (x0 == null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      x0 = null;
+      if (Math.abs(dx) < 60) return;
+      location.hash = "#/track/" + S.addDays(day, dx < 0 ? 1 : -1);
+    }, { passive: true });
   }).catch(() => {
     root.innerHTML = "";
-    root.appendChild(empty("!!", "Course data did not load", "data/courses.json is missing or malformed."));
+    root.appendChild(empty("!!", "Could not load your courses",
+      "The Worker did not answer. The app keeps a copy, so this usually means a bad key or no signal."));
   });
 }
-const isStill = () => isTabTrack();
-function isTabTrack() { return location.hash.replace(/^#\/?/, "").split("/")[0] === "track"; }
 
-// ------------------------------------------------------------------ the rail
-function rail(traj) {
-  const box = el("div", { class: "rail" });
-  const W = 720, H = 132, PAD = 10;
-  const n = traj.altitude.length - 1;
-  const x = (i) => PAD + (i / n) * (W - PAD * 2);
-  // Altitude 0 (free and at full efficiency) sits LOW on the screen and
-  // altitude 1 (fully committed) sits HIGH. This is an orbit seen from the
-  // side: the dip IS periapsis, and periapsis is where you burn. Getting this
-  // backwards, which the first build did, inverts the entire metaphor and puts
-  // the burn markers on the peaks.
-  const y = (a) => 16 + (1 - a) * (H - 52);
+// ------------------------------------------------------------------ day nav
+function dayNav(day, capH) {
+  const box = el("div", { class: "daynav" });
 
-  const pts = traj.altitude.map((a, i) => x(i) + "," + y(a));
-  const svg = [];
-  svg.push('<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">');
-  for (let g = 0; g <= 4; g++) {
-    const yy = 16 + (g / 4) * (H - 46);
-    svg.push('<line class="gridline" x1="' + PAD + '" y1="' + yy + '" x2="' + (W - PAD) + '" y2="' + yy + '"/>');
-  }
-  // Fill DOWN from the trace to the floor: the shaded body is the well.
-  svg.push('<polygon class="fill" points="' + x(0) + ',' + (H - 22) + ' ' + pts.join(" ") + ' ' + x(n) + ',' + (H - 22) + '"/>');
-  svg.push('<polyline class="trace" points="' + pts.join(" ") + '"/>');
+  const prev = el("button", { type: "button", class: "daybtn", "aria-label": "Previous day" }, "&#8249;");
+  prev.addEventListener("click", () => { location.hash = "#/track/" + S.addDays(day, -1); });
 
-  // now-line
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  if (nowMin >= traj.windowStart && nowMin <= traj.windowEnd && traj.date === todayIso()) {
-    const nx = PAD + ((nowMin - traj.windowStart) / (traj.windowEnd - traj.windowStart)) * (W - PAD * 2);
-    svg.push('<line class="nowline" x1="' + nx + '" y1="10" x2="' + nx + '" y2="' + (H - 22) + '"/>');
+  const mid = el("div", { class: "daymid" });
+  const isToday = day === todayIso();
+  mid.appendChild(el("div", { class: "dayname" }, esc(fmtDay(day))));
+  const sub = el("div", { class: "daysub" });
+  sub.textContent = (isToday ? "today" : runway(day).toLowerCase()) + "  ·  " + capH + "h usable";
+  mid.appendChild(sub);
+  // Tapping the middle always returns to today, which is the one move a
+  // day-stepper always needs and usually lacks.
+  if (!isToday) {
+    mid.style.cursor = "pointer";
+    mid.setAttribute("title", "Back to today");
+    mid.addEventListener("click", () => { location.hash = "#/track/" + todayIso(); });
   }
 
-  // Burn markers sit ON the curve, at the dip. Labels are de-duplicated and
-  // pushed apart, because the first build rendered "MFEE264" out of two
-  // overlapping labels and that is worse than no label.
-  const placed = [];
-  const marks = (traj.burns || [])
-    .map((b) => {
-      const mid = (S.mins(b.start) + S.mins(b.end)) / 2;
-      return { mid, label: b.label || "" };
-    })
-    .filter((m) => m.mid >= traj.windowStart && m.mid <= traj.windowEnd)
-    .sort((a, b) => a.mid - b.mid);
+  const next = el("button", { type: "button", class: "daybtn", "aria-label": "Next day" }, "&#8250;");
+  next.addEventListener("click", () => { location.hash = "#/track/" + S.addDays(day, 1); });
 
-  marks.forEach((m) => {
-    const bx = PAD + ((m.mid - traj.windowStart) / (traj.windowEnd - traj.windowStart)) * (W - PAD * 2);
-    const idx = Math.round(((m.mid - traj.windowStart) / (traj.windowEnd - traj.windowStart)) * n);
-    const by = y(traj.altitude[Math.max(0, Math.min(n, idx))]);
-    svg.push('<line class="burnstem" x1="' + bx + '" y1="' + (by - 4) + '" x2="' + bx + '" y2="14"/>');
-    svg.push('<circle class="burn" cx="' + bx + '" cy="' + by + '" r="4"/>');
-    // one label per ~64px of width; the rest are dots only
-    const clash = placed.some((px) => Math.abs(px - bx) < 64);
-    if (!clash && m.label) {
-      placed.push(bx);
-      const anchor = bx < 60 ? "start" : bx > W - 60 ? "end" : "middle";
-      svg.push('<text class="burnlabel" x="' + bx + '" y="11" text-anchor="' + anchor + '">' + esc(m.label) + '</text>');
-    }
-  });
-  svg.push("</svg>");
-  box.innerHTML = svg.join("");
-
-  const ax = el("div", { class: "rail-x" });
-  ax.appendChild(el("span", null, esc(S.clock(traj.windowStart))));
-  ax.appendChild(el("span", null, "periapsis = burn here"));
-  ax.appendChild(el("span", null, esc(S.clock(traj.windowEnd))));
-  box.appendChild(ax);
+  box.appendChild(prev); box.appendChild(mid); box.appendChild(next);
   return box;
 }
 
-// --------------------------------------------------------------- deliverables
-function deliverable(it, day, urgent) {
+// ---------------------------------------------------------------- one item
+function row(it, day, isDue) {
   const sev = it.severity;
-  const cls = sev === "flatzero" || sev === "exam" ? "is-cliff" : urgent ? "is-burn" : "is-tel";
+  const cls = sev === "flatzero" || sev === "exam" ? "is-cliff" : isDue ? "is-burn" : "is-tel";
   const p = el("div", { class: "panel " + cls });
 
   const ph = el("div", { class: "ph" });
   ph.appendChild(el("span", { class: "pt" }, esc(it.short + " · " + it.label)));
-  ph.appendChild(el("span", { class: "pm" }, esc(runway(it.due))));
+  ph.appendChild(el("span", { class: "pm" }, esc(isDue ? it.dueTime : runway(it.due))));
   p.appendChild(ph);
 
   const meta = [];
-  meta.push("due " + fmtDay(it.due) + " " + it.dueTime);
+  if (!isDue) meta.push("due " + fmtDay(it.due) + " " + it.dueTime);
   if (it.effortMin) meta.push(S.fmtHrs(it.effortMin));
   if (it.submit) meta.push(it.submit);
-  const m = el("div", { class: "pm" }, esc(meta.join("  ·  ")));
-  m.style.marginTop = "2px";
-  p.appendChild(m);
+  if (meta.length) {
+    const m = el("div", { class: "pm" }, esc(meta.join("  ·  ")));
+    m.style.marginTop = "2px";
+    p.appendChild(m);
+  }
 
   if (sev === "flatzero") {
     const w = el("p", null, "");
-    w.textContent = "Late is a FLAT ZERO. Planned a full day early on purpose.";
+    w.textContent = "Late is a FLAT ZERO.";
     w.style.color = "var(--cliff)";
-    p.appendChild(w);
-  } else if (it.late && it.late !== "n/a") {
-    const w = el("p", null, "");
-    w.textContent = "Late: " + it.late;
     p.appendChild(w);
   }
 
-  const sch = it.schedule;
-  if (sch && sch.blocks.length) {
-    const b = sch.blocks[0];
-    const line = el("p", null, "");
-    line.style.color = urgent ? "var(--burn)" : "var(--dim)";
-    line.textContent = (urgent ? "Start " : "Starts ") +
-      (b.date === day ? "today " : fmtDay(b.date) + " ") + b.start +
-      (sch.blocks.length > 1 ? "  (" + sch.blocks.length + " sittings)" : "");
-    p.appendChild(line);
-  } else if (it.effortMin > 0 && sch && !sch.feasible) {
-    const line = el("p", null, "");
-    line.style.color = "var(--cliff)";
-    line.textContent = "Does not fit. " + S.fmtHrs(sch.shortMin) + " short of a place to put it.";
-    p.appendChild(line);
+  if (!isDue && it.schedule) {
+    const b = it.schedule.blocks.filter((x) => x.date === day);
+    if (b.length) {
+      const line = el("p", null, "");
+      line.style.color = "var(--burn)";
+      line.textContent = b.map((x) => x.start + "–" + x.end).join(",  ");
+      p.appendChild(line);
+    }
   }
-  if (it.note) {
-    const n = el("p", null, "");
-    n.textContent = it.note;
-    n.style.fontSize = ".84rem";
-    p.appendChild(n);
+  if (isDue && it.effortMin > 0 && it.schedule && it.schedule.lst) {
+    const l = it.schedule.lst;
+    const line = el("p", null, "");
+    line.style.color = l.date < day ? "var(--cliff)" : "var(--burn)";
+    line.textContent = l.date < day
+      ? "Should have started " + fmtDay(l.date) + "."
+      : "Start " + l.time + ".";
+    p.appendChild(line);
   }
   return p;
+}
+
+// ----------------------------------------------------------------- updates
+// What the updates notebook said on this day. Reads the local log first so it
+// works offline, then refreshes from the Worker, because the transcript of a
+// read-aloud only exists server-side.
+function updatesPanel(day) {
+  const box = el("div", { class: "panel is-burn", id: "updbox" });
+  paintUpdates(box, lsGet(logKey(day), []).filter((r) => r.book === "updates"), day);
+
+  api("/note?date=" + day).then((d) => {
+    if (!isHere()) return;
+    const rows = (d.notes || []).filter((r) => r.book === "updates");
+    const live = document.getElementById("updbox");
+    if (live && rows.length) paintUpdates(live, rows, day);
+  }).catch(() => {});
+  return box;
+}
+
+function paintUpdates(box, rows, day) {
+  box.innerHTML = "";
+  if (!rows.length) {
+    box.appendChild(empty("—", "Nothing read yet",
+      day === todayIso()
+        ? "Read the updates page aloud on Tonight and it lands here."
+        : "No updates were logged on this day."));
+    return;
+  }
+  rows.forEach((r) => {
+    const line = el("div", { class: "logrow" });
+    line.appendChild(el("span", { class: "t" }, esc(String(r.at || "").slice(11, 16))));
+    const x = el("span", { class: "x" });
+    // Dictated content, never innerHTML.
+    x.textContent = r.text || (r.failed ? "(recording failed: " + r.failed + ")" : "(recording, transcribing)");
+    if (r.failed) x.style.color = "var(--cliff)";
+    line.appendChild(x);
+    box.appendChild(line);
+  });
+}
+
+// ----------------------------------------------------------------- classes
+function classesPanel(data, day) {
+  const box = el("div", { class: "panel" });
+  const busy = S.busyOn(data, day);
+  if (!busy.length) {
+    box.appendChild(empty("—", "No classes", "Nothing on the timetable for this day."));
+    return box;
+  }
+  busy.forEach((b) => {
+    const line = el("div", { class: "gauge" });
+    const t = el("span", { class: "gl" });
+    t.textContent = b.label;
+    line.appendChild(t);
+    line.appendChild(el("span", { class: "gv" }, esc(S.clock(b.start) + "–" + S.clock(b.end))));
+    box.appendChild(line);
+  });
+  return box;
 }

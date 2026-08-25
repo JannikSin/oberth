@@ -16,7 +16,7 @@
 
    LAYOUT LANGUAGE per tab, deliberately unlike each other:
      TONIGHT   the log book    two ruled lanes, a recording bar, timestamps
-     TRACK     the trajectory  the periapsis rail, burn markers on a curve
+     TRACK     the day         one day, an arrow each side, what is due and when
      STUDY     the burn card   one card at a time, full bleed, two verdicts
      COURSES   the panel       fixed data, gauge rows, cliff counters
      CAREER    the manifest    dated rows, status ticks, no ornament
@@ -139,34 +139,38 @@ a{color:var(--tel);text-underline-offset:3px;}
 .mast .alt{font-family:var(--din-alt);font-size:.72rem;color:var(--faint);text-align:right;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
 .mast .alt b{display:block;font-size:1.5rem;color:var(--ink);letter-spacing:0;font-weight:400;}
 
-/* ------------------------------------------------------ the periapsis rail --
-   The signature. Altitude = how committed the hours are. The curve dips where
-   the day opens up, and an amber burn marker sits at the dip. A day that never
-   reaches periapsis (Monday) shows a flat high arc and no marker, which is the
-   whole point: there is nowhere to burn, so the work has to move.            */
-.rail{
-  position:relative;
+/* --------------------------------------------------------------- day nav --
+   The rail is gone (David: "some graph at the top that means nothing to me").
+   What replaces it is the plainest possible thing: the day, an arrow each
+   side, and the one number that matters. Tapping the middle returns to today.
+   Arrows are 48px so they are hittable with a thumb on a walk.              */
+.daynav{
+  display:flex;align-items:stretch;gap:0;
+  margin:14px 0 6px;
+  border:1px solid var(--rule);border-radius:2px;
   background:var(--panel);
-  border:1px solid var(--rule);
-  border-radius:2px;
-  padding:0;
-  margin:0 0 20px;
   overflow:hidden;
 }
-.rail svg{display:block;width:100%;height:132px;}
-.rail .rail-x{
-  display:flex;justify-content:space-between;
-  padding:0 10px 8px;
-  font-family:var(--din-alt);font-size:.62rem;letter-spacing:.14em;
-  color:var(--faint);text-transform:uppercase;
+.daybtn{
+  flex:none;width:52px;min-height:64px;
+  background:none;border:none;cursor:pointer;
+  color:var(--dim);font-family:var(--din);font-size:1.9rem;line-height:1;
 }
-.rail .trace{fill:none;stroke:var(--tel);stroke-width:1.5;opacity:.75;}
-.rail .fill{fill:var(--tel-soft);stroke:none;}
-.rail .gridline{stroke:var(--grid);stroke-width:1;}
-.rail .burn{fill:var(--burn);}
-.rail .burnstem{stroke:var(--burn-edge);stroke-width:1;stroke-dasharray:2 3;}
-.rail .burnlabel{font-family:var(--din-alt);font-size:9px;fill:var(--burn);letter-spacing:.1em;text-transform:uppercase;}
-.rail .nowline{stroke:var(--ink);stroke-width:1;opacity:.5;}
+.daybtn:hover{background:var(--panel-2);color:var(--ink);}
+.daybtn:first-child{border-right:1px solid var(--rule);}
+.daybtn:last-child{border-left:1px solid var(--rule);}
+.daymid{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:10px 6px;text-align:center;min-width:0;
+}
+.dayname{
+  font-family:var(--din);font-size:1.45rem;letter-spacing:.05em;
+  text-transform:uppercase;line-height:1.05;
+}
+.daysub{
+  font-family:var(--din-alt);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);margin-top:3px;
+}
 
 /* --------------------------------------------------------------- surfaces --
    Panels, not cards: square corners, one hairline, no drop shadow bloom. The

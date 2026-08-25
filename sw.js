@@ -17,7 +17,7 @@
 // ============================================================================
 
 const CACHE_PREFIX = "oberth-shell-";
-const CACHE = CACHE_PREFIX + "v2";
+const CACHE = CACHE_PREFIX + "v3";
 
 // Bump CACHE on ANY change to a precached file. A phone holding old CSS while
 // fetching new markup renders a broken page, and the user cannot tell that
