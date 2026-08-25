@@ -17,7 +17,7 @@
 // ============================================================================
 
 const CACHE_PREFIX = "oberth-shell-";
-const CACHE = CACHE_PREFIX + "v3";
+const CACHE = CACHE_PREFIX + "v4";
 
 // Bump CACHE on ANY change to a precached file. A phone holding old CSS while
 // fetching new markup renders a broken page, and the user cannot tell that
@@ -46,7 +46,19 @@ self.addEventListener("install", (e) => {
   // addAll is all-or-nothing: one 404 fails the whole install and the old SW
   // stays live, which is the correct failure. A half-populated cache is worse
   // than none because it serves a partial app.
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  //
+  // BUT addAll fetches through the HTTP cache, and that is a trap. On
+  // 2026-08-25 a version bump installed while the GitHub Pages CDN edge was
+  // mid-propagation, so v3 precached the OLD JavaScript and then served it
+  // cache-first forever. The app looked frozen at the previous build with a
+  // fresh cache name, which is indistinguishable from "the deploy did not
+  // happen". Requesting each URL with cache:"reload" forces the network and
+  // makes a version bump mean what it says.
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => c.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (e) => {
