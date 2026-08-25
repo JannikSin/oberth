@@ -136,6 +136,34 @@ export function api(path) {
     });
 }
 
+// ------------------------------------------------------- the course rulebook
+// The syllabus data does NOT ship in this repo. GitHub Pages will not serve a
+// private repo on David's plan, so the app repo is public, and his course
+// schedule names the room he is in at every hour of every weekday under his
+// real name. That is not something to publish to satisfy a hosting
+// constraint. It lives in the Worker's KV behind the key, which is the same
+// doctrine Crystal uses: the Pages app is an empty shell.
+//
+// Cached in localStorage so the app still renders offline and on a cold plane.
+let COURSES = null;
+export async function courses() {
+  if (COURSES) return COURSES;
+  const cached = lsGet(K("courses"), null);
+  try {
+    const fresh = await api("/courses");
+    if (fresh && Array.isArray(fresh.courses) && fresh.courses.length) {
+      COURSES = fresh;
+      lsSet(K("courses"), fresh);
+      return fresh;
+    }
+    if (cached) { COURSES = cached; return cached; }
+    return fresh || { courses: [] };
+  } catch (e) {
+    if (cached) { COURSES = cached; return cached; }
+    throw e;
+  }
+}
+
 // ---------------------------------------------------------------- router --
 let router = () => {};
 export function setRouter(fn) { router = fn; }

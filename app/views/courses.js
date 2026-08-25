@@ -11,7 +11,7 @@
 // left, spending one this week costs you nothing" is an approach behaviour.
 // "0 of 2 used" is a report card. Only one of those gets tapped.
 
-import { el, esc, mast, zone, footer, empty, K, lsGet, lsSet, todayIso } from "../../core.js";
+import { el, esc, mast, zone, footer, empty, K, lsGet, lsSet, todayIso, courses as courseData } from "../../core.js";
 import { queueTick, deadLetters } from "../../sync.js";
 
 const ledgerKey = K("ledger");
@@ -24,12 +24,7 @@ function spend(id, n) {
   return L[id];
 }
 
-let DATA = null;
-async function load() {
-  if (DATA) return DATA;
-  DATA = await (await fetch("./data/courses.json")).json();
-  return DATA;
-}
+const load = () => courseData();
 
 export function open(parts) {
   const root = document.getElementById("root");

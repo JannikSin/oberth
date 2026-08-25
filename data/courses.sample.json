@@ -1,0 +1,58 @@
+{
+  "app": "oberth",
+  "version": 1,
+  "note": "REAL DATA LIVES IN THE WORKER KV, not here. This is the shape only. Push the real file with: curl -X POST -H \"x-oberth-key: $KEY\" --data-binary @data/courses.json https://oberth.janniksin.workers.dev/courses",
+  "term": "Fall 2026",
+  "noClassDays": [
+    "YYYY-MM-DD"
+  ],
+  "courses": [
+    {
+      "code": "ABC12300",
+      "short": "ABC 123",
+      "title": "Course title",
+      "credits": 3,
+      "accent": "tel",
+      "meets": [
+        {
+          "days": [
+            "MO",
+            "WE"
+          ],
+          "start": "10:30",
+          "end": "11:20",
+          "room": "BLDG 000"
+        }
+      ],
+      "instructor": {
+        "name": "Prof Name",
+        "email": "x@purdue.edu"
+      },
+      "officeHours": [],
+      "rules": [
+        {
+          "id": "abc-hw",
+          "label": "Homework",
+          "byday": [
+            "MO"
+          ],
+          "dueTime": "23:59",
+          "effortH": 1.5,
+          "submit": "Gradescope",
+          "late": "not accepted",
+          "severity": "hard"
+        }
+      ],
+      "drops": [
+        {
+          "id": "abc-drops",
+          "label": "Homework drops",
+          "total": 2
+        }
+      ],
+      "cliffs": []
+    }
+  ],
+  "commitments": [],
+  "missingCourses": []
+}

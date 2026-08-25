@@ -66,20 +66,23 @@ to start something before the event. Nothing may depend on daily fidelity.
   shows the nearest external deadline, so the council's risk (burying the
   highest-stakes lane) fails loudly rather than quietly.
 
+## Shipped 2026-08-25
+
+The Worker is **live** at `https://oberth.janniksin.workers.dev` on its own KV
+namespace, with Groq transcription working end to end. See the transcription
+section below.
+
 ## Not built yet, in rough priority order
 
-1. **The Cloudflare Worker** (`worker/`). Nothing syncs until it exists and is
-   deployed. The client queues offline and waits, which is correct behaviour,
-   but no data leaves the phone.
-2. **Deck generation from transcripts.** Bonmot's `tools/review_import.mjs` is
+1. **Deck generation from transcripts.** Bonmot's `tools/review_import.mjs` is
    the working pattern; point it at a lecture instead of a paper. Local by
    default via `dispatch.py paddington`, cloud when the laptop is closed.
    **Parked by David 2026-08-25**, deliberately, pending a decision on shape.
-3. **PHYS 310 content.** Midterm 1 is 2026-09-21, the course is 90% exams on a
+2. **PHYS 310 content.** Midterm 1 is 2026-09-21, the course is 90% exams on a
    curve with no drops, and there is no study material anywhere.
    **Parked by David 2026-08-25.**
-4. Clubs and research sections.
-5. Light mode is defined in tokens but has never been looked at on a device.
+3. Clubs and research sections.
+4. Light mode is defined in tokens but has never been looked at on a device.
 
 ## Transcription: Groq, not Deepgram
 

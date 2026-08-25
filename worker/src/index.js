@@ -103,7 +103,7 @@ function role(request, env) {
 }
 
 const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge"];
-const PHONE_GET = ["/note", "/grade", "/tick", "/career"];
+const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses"];
 function phoneAllowed(method, path) {
   if (method === "GET") return PHONE_GET.includes(path);
   if (method === "POST") return PHONE_POST.includes(path);
@@ -376,6 +376,28 @@ export default {
       if (!id.startsWith("nudge:")) return json(400, { error: "bad id" });
       await env.STORE.delete(id);
       return json(200, { ok: true });
+    }
+
+    // ------------------------------------------------------------- /courses
+    // The syllabus rulebook lives HERE, not in the Pages repo.
+    //
+    // GitHub Pages will not serve a private repo on David's plan, so the app
+    // repo has to be public. His course schedule names the room he is in at
+    // every hour of every weekday, under his real name, which is not something
+    // to publish to satisfy a hosting constraint. Same doctrine as Crystal:
+    // the Pages app is an empty shell and every byte of content is in KV
+    // behind the key.
+    if (path === "/courses" && method === "POST") {
+      if (who !== "laptop") return json(403, { error: "laptop only" });
+      const b = (await readJson(request)) || {};
+      if (!b || !Array.isArray(b.courses)) return json(400, { error: "courses[] required" });
+      await env.STORE.put("courses", JSON.stringify(b));
+      return json(200, { ok: true, courses: b.courses.length });
+    }
+    if (path === "/courses" && method === "GET") {
+      const v = await getJson(env, "courses", null);
+      if (!v) return json(200, { courses: [], missing: true });
+      return json(200, v);
     }
 
     // -------------------------------------------------------------- /career

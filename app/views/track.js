@@ -9,17 +9,10 @@
 //
 // This is why the app is called Oberth. A burn is worth more at periapsis.
 
-import { el, esc, mast, zone, footer, empty, todayIso, fmtDay, runway, K, lsGet } from "../../core.js";
+import { el, esc, mast, zone, footer, empty, todayIso, fmtDay, runway, courses } from "../../core.js";
 import * as S from "../schedule.js";
 
-let DATA = null;
-
-async function load() {
-  if (DATA) return DATA;
-  const r = await fetch("./data/courses.json");
-  DATA = await r.json();
-  return DATA;
-}
+const load = () => courses();
 
 export function open(parts) {
   const root = document.getElementById("root");

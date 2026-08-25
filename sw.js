@@ -17,7 +17,7 @@
 // ============================================================================
 
 const CACHE_PREFIX = "oberth-shell-";
-const CACHE = CACHE_PREFIX + "v1";
+const CACHE = CACHE_PREFIX + "v2";
 
 // Bump CACHE on ANY change to a precached file. A phone holding old CSS while
 // fetching new markup renders a broken page, and the user cannot tell that
@@ -37,7 +37,6 @@ const PRECACHE = [
   "./app/views/courses.js",
   "./app/views/career.js",
   "./vendor/ts-fsrs.mjs",
-  "./data/courses.json",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -64,8 +63,9 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET") return;          // never cache a POST
   if (url.origin !== location.origin) return;      // never cache the Worker
-  // data/*.json is the course rulebook and changes when a syllabus does, so it
-  // is network-first: correctness beats a few hundred milliseconds.
+  // data/*.json no longer carries the course rulebook (that moved to the
+  // Worker), but decks.json still lives here and changes when notes are read,
+  // so it stays network-first: correctness beats a few hundred milliseconds.
   if (url.pathname.includes("/data/")) {
     e.respondWith(
       fetch(e.request).then((r) => {
