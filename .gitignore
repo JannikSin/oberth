@@ -5,3 +5,6 @@
 .env*
 !.env.example
 data/courses.json
+wrangler.jsonc
+node_modules/
+.wrangler/
