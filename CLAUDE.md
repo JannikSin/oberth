@@ -71,18 +71,51 @@ to start something before the event. Nothing may depend on daily fidelity.
 1. **The Cloudflare Worker** (`worker/`). Nothing syncs until it exists and is
    deployed. The client queues offline and waits, which is correct behaviour,
    but no data leaves the phone.
-2. **Server-side transcription.** `sync.js` uploads audio to `/audio`; the Worker
-   must call Deepgram. David already has Nova-3 wired in `Projects/voicetype`,
-   and `vocab.txt` there is the keyword-boost list worth reusing for course
-   jargon (Coriolis, Teamcenter, Lagrangian).
-3. **Deck generation from transcripts.** Bonmot's `tools/review_import.mjs` is
+2. **Deck generation from transcripts.** Bonmot's `tools/review_import.mjs` is
    the working pattern; point it at a lecture instead of a paper. Local by
    default via `dispatch.py paddington`, cloud when the laptop is closed.
-4. **PHYS 310 content.** The urgent one. Midterm 1 is 2026-09-21, the course is
-   90% exams on a curve with no drops, and there is currently no study material
-   anywhere.
-5. Clubs and research sections.
-6. Light mode is defined in tokens but has never been looked at on a device.
+   **Parked by David 2026-08-25**, deliberately, pending a decision on shape.
+3. **PHYS 310 content.** Midterm 1 is 2026-09-21, the course is 90% exams on a
+   curve with no drops, and there is no study material anywhere.
+   **Parked by David 2026-08-25.**
+4. Clubs and research sections.
+5. Light mode is defined in tokens but has never been looked at on a device.
+
+## Transcription: Groq, not Deepgram
+
+**A correction worth keeping.** An earlier draft of this file said David "already
+has Nova-3 wired in `Projects/voicetype`". That is FALSE. `voicetype/key.txt` is
+the KEYBOARD HOLD KEY, not an API key, and voicetype runs faster-whisper
+**locally** precisely because Claude Code's Deepgram dictation will not accept a
+custom vocabulary. He has no Deepgram account.
+
+What he does have is `GROQ_API_KEY`, and Groq serves `whisper-large-v3-turbo`
+on the free tier. That is the lane. The vocabulary lives in the `VOCAB` constant
+in `worker/src/index.js`, passed as the `prompt` parameter, and it verifiably
+works: a test recording came back with "Nolte", "Lagrangian" and "MFET" all
+spelled correctly.
+
+### The hallucination gate, and why no_speech_prob is not used
+
+Measured against three seconds of PURE DIGITAL SILENCE:
+
+- `no_speech_prob` came back **0.0000**. It is worthless here.
+- The model returned `" www.patreon.com"` on one run and `"Thank you"` on
+  another. These are its YouTube-caption training data leaking through.
+
+What actually separates speech from silence, measured:
+
+| signal | real speech | silence |
+|---|---|---|
+| `avg_logprob` | -0.36 | -0.81 |
+| words/second | ~2 to 3 | 0.33 |
+
+So the gate is: a junk-phrase denylist, words-per-second below 0.5, and
+`avg_logprob` below -0.7 on a short transcript. Plus a vocabulary-echo check,
+because given non-speech the model will sometimes hand the prompt straight back
+and that would be stored as a night's lecture notes.
+
+**Do not "simplify" this to no_speech_prob.** It was tested and it does not work.
 
 ## Before you touch the service worker
 
