@@ -8,7 +8,7 @@
      private Worker. No inline script (the SW registers from app.js), no remote
      fonts, no CDN, no base tag. DIN ships with iOS and Windows, so the type
      costs no network at all. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://oberth.janniksin.workers.dev; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://oberth.janniksin.workers.dev https://crystal-brief.janniksin.workers.dev; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#0B1016" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#E8EDF2" media="(prefers-color-scheme: light)">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -32,5 +32,6 @@
   <button type="button" data-tab="career" aria-current="false"><span class="tk"></span>Career</button>
 </nav>
 <script type="module" src="./app.js"></script>
+<script src="./suggest.js"></script>
 </body>
 </html>
