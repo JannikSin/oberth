@@ -14,6 +14,8 @@
 //   POST /nudge           an improvement note from the FIX NOTE key
 //   GET  /nudge           laptop drains them
 //   DELETE /nudge?id=     laptop consumes one after filing it
+//   GET  /questions       open + answered questions mined from the notes
+//   POST /questions       laptop writes answers back (or adds a question)
 //   POST /career          laptop pushes the career manifest
 //   GET  /career          the manifest
 //   GET  /health          liveness, no auth, no data
@@ -112,7 +114,7 @@ function role(request, env) {
 }
 
 const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge"];
-const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses"];
+const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses", "/questions"];
 function phoneAllowed(method, path) {
   if (method === "GET") return PHONE_GET.includes(path);
   if (method === "POST") return PHONE_POST.includes(path);
@@ -215,6 +217,63 @@ async function transcribe(env, blob, filename) {
   return { ok: true, text, duration: dur, language: out.language, avgLogprob };
 }
 
+// ------------------------------------------------------- question mining ----
+// David narrates questions while reading his notes back: "What is a Vanderpool
+// oscillator? I don't know." "physics 4.11, I want to look into that." Those
+// are the highest-value lines in a transcript and they were vanishing into a
+// wall of text.
+//
+// This pulls them out at transcription time and files them OPEN. It does NOT
+// answer them. A wrong physics answer he studies from is the same hazard as a
+// fabricated flashcard: answering is done deliberately, with sources, and the
+// answer is written back through POST /questions.
+async function mineQuestions(env, text, meta) {
+  if (!env.GROQ_API_KEY || !text || text.length < 40) return [];
+  const sys = "Extract only genuine open questions the speaker wants answered later: things they said they do not know, want to look up, or need to find out. Ignore rhetorical questions, self-answered questions, and course logistics they already stated. Return STRICT JSON: an array of objects {\"q\": \"the question, rewritten as a clear standalone question\", \"why\": \"a short quote from the text that shows they asked it\"}. Return [] if there are none. No prose, no markdown fences.";
+  let res;
+  try {
+    res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { authorization: "Bearer " + env.GROQ_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        temperature: 0,
+        max_tokens: 700,
+        messages: [{ role: "system", content: sys }, { role: "user", content: text.slice(0, 12000) }],
+      }),
+    });
+  } catch (e) { return []; }
+  if (!res.ok) return [];
+  const out = await res.json().catch(() => null);
+  const raw = out && out.choices && out.choices[0] && out.choices[0].message
+    ? String(out.choices[0].message.content || "") : "";
+  let arr;
+  try {
+    arr = JSON.parse(raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim());
+  } catch (e) { return []; }
+  if (!Array.isArray(arr)) return [];
+
+  const store = await getJson(env, "questions", []);
+  const seen = new Set(store.map((x) => String(x.q || "").toLowerCase().trim()));
+  const added = [];
+  for (const it of arr.slice(0, 12)) {
+    const q = clip(it && it.q, 400).trim();
+    if (!q || seen.has(q.toLowerCase())) continue;
+    seen.add(q.toLowerCase());
+    const rec = {
+      id: "q" + Date.now() + Math.random().toString(36).slice(2, 6),
+      q, why: clip(it && it.why, 400),
+      date: meta.date, book: meta.book,
+      askedAt: new Date().toISOString(),
+      status: "open", answer: null, sources: null, answeredAt: null,
+    };
+    store.push(rec);
+    added.push(rec);
+  }
+  if (added.length) await env.STORE.put("questions", JSON.stringify(store));
+  return added;
+}
+
 // ------------------------------------------------------------ KV helpers ----
 async function getJson(env, key, fallback) {
   try {
@@ -265,7 +324,8 @@ export default {
         at: clip(b.at, 30) || new Date().toISOString(),
         kind: "text", warn: warn.length ? warn : undefined,
       });
-      return json(200, { ok: true, stored: n, warn: warn.length ? warn : undefined });
+      const mined = await mineQuestions(env, text, { date, book });
+      return json(200, { ok: true, stored: n, questions: mined.length, warn: warn.length ? warn : undefined });
     }
 
     if (path === "/note" && method === "GET") {
@@ -325,7 +385,8 @@ export default {
         book, kind: "audio", text: t.text, at: new Date().toISOString(),
         seconds: meta.seconds || null, duration: t.duration, blobId,
       });
-      return json(200, { ok: true, text: t.text, duration: t.duration, stored: n });
+      const mined = await mineQuestions(env, t.text, { date, book });
+      return json(200, { ok: true, text: t.text, duration: t.duration, stored: n, questions: mined.length });
     }
 
     // --------------------------------------------------------------- /grade
@@ -385,6 +446,43 @@ export default {
       if (!id.startsWith("nudge:")) return json(400, { error: "bad id" });
       await env.STORE.delete(id);
       return json(200, { ok: true });
+    }
+
+    // ------------------------------------------------------------ /questions
+    if (path === "/questions" && method === "GET") {
+      return json(200, { questions: await getJson(env, "questions", []) });
+    }
+    // The laptop writes answers back. This is deliberately laptop-only: an
+    // answer he will study from gets researched with sources, not guessed.
+    if (path === "/questions" && method === "POST") {
+      if (who !== "laptop") return json(403, { error: "laptop only" });
+      const b = (await readJson(request)) || {};
+      const store = await getJson(env, "questions", []);
+      if (Array.isArray(b.answers)) {
+        const byId = new Map(store.map((x) => [x.id, x]));
+        b.answers.forEach((a) => {
+          const rec = byId.get(a.id);
+          if (!rec) return;
+          rec.answer = clip(a.answer, 6000);
+          rec.sources = Array.isArray(a.sources) ? a.sources.slice(0, 8).map((u) => clip(u, 300)) : null;
+          rec.status = "answered";
+          rec.answeredAt = new Date().toISOString();
+        });
+      }
+      if (Array.isArray(b.add)) {
+        b.add.forEach((a) => store.push({
+          id: "q" + Date.now() + Math.random().toString(36).slice(2, 6),
+          q: clip(a.q, 400), why: clip(a.why, 400),
+          date: safeDate(a.date), book: clip(a.book, 20) || "lecture",
+          askedAt: new Date().toISOString(),
+          status: a.answer ? "answered" : "open",
+          answer: a.answer ? clip(a.answer, 6000) : null,
+          sources: Array.isArray(a.sources) ? a.sources.slice(0, 8).map((u) => clip(u, 300)) : null,
+          answeredAt: a.answer ? new Date().toISOString() : null,
+        }));
+      }
+      await env.STORE.put("questions", JSON.stringify(store));
+      return json(200, { ok: true, total: store.length });
     }
 
     // ------------------------------------------------------------- /courses

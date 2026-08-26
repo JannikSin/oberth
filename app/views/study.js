@@ -10,7 +10,7 @@
 // and the cards fall out of it. An empty deck here is not a bug, it means a
 // night has not been read yet.
 
-import { el, esc, mast, zone, footer, empty, K, lsGet, lsSet, go, todayIso } from "../../core.js";
+import { el, esc, mast, zone, footer, empty, K, lsGet, lsSet, go, todayIso, api, fmtDay } from "../../core.js";
 import { queueGrade } from "../../sync.js";
 import { newProgress, grade, isDue, dueInDays } from "../srs.js";
 
@@ -53,15 +53,18 @@ function picker(root, bank) {
   const wrap = document.createElement("div");
   const now = new Date();
   const due = dueCards(bank, now);
-  wrap.appendChild(mast("Study", "cards built from your notes", "due now", String(due.length)));
+  wrap.appendChild(mast("Study", "questions and cards from your notes", "due now", String(due.length)));
+
+  // Questions come first. They are the thing he actually generates every night
+  // ("What is a Vanderpool oscillator? I don't know"), and until decks exist
+  // they are the only real content on this tab.
+  wrap.appendChild(zone("your questions"));
+  wrap.appendChild(questionsPanel());
 
   if (!bank.cards.length) {
+    wrap.appendChild(zone("decks"));
     wrap.appendChild(empty("∅", "No cards yet",
-      "Cards are generated from the lecture notebook. Read a night's notes aloud on Tonight and the deck builds itself."));
-    const b = el("button", { type: "button", class: "savebtn" }, "Go to Tonight");
-    b.style.width = "100%";
-    b.addEventListener("click", () => go("#/tonight"));
-    wrap.appendChild(b);
+      "Deck generation is parked. When it is built, cards come from the lecture notebook."));
     wrap.appendChild(footer());
     root.appendChild(wrap);
     return;
@@ -165,4 +168,111 @@ function runDeck(root, bank, deckId) {
   }
 
   paint();
+}
+
+
+// ------------------------------------------------------------- questions ----
+// David reads his notes back and narrates questions into them. Those lines used
+// to disappear into a wall of transcript. The Worker mines them at
+// transcription time and files them OPEN; answers are written back from the
+// laptop with sources, never guessed, for the same reason a fabricated
+// flashcard is worse than no flashcard.
+const QCACHE = K("questions");
+
+function questionsPanel() {
+  const box = el("div", { id: "qbox" });
+  paintQuestions(box, lsGet(QCACHE, []));
+  api("/questions").then((d) => {
+    const qs = d.questions || [];
+    lsSet(QCACHE, qs);
+    const live = document.getElementById("qbox");
+    if (live) paintQuestions(live, qs);
+  }).catch(() => {});
+  return box;
+}
+
+function paintQuestions(box, qs) {
+  box.innerHTML = "";
+  if (!qs.length) {
+    box.appendChild(empty("?", "No questions yet",
+      "When you wonder aloud while reading your notes, it gets pulled out and lands here."));
+    return;
+  }
+  // Answered first: those are the payoff. Open ones below, so the list reads
+  // as "here is what you asked and here is what came back".
+  const answered = qs.filter((q) => q.status === "answered");
+  const open = qs.filter((q) => q.status !== "answered");
+
+  answered.slice().reverse().forEach((q) => box.appendChild(qCard(q, true)));
+  open.slice().reverse().forEach((q) => box.appendChild(qCard(q, false)));
+}
+
+function qCard(q, answered) {
+  const p = el("div", { class: "panel " + (answered ? "is-tel" : "is-burn") });
+
+  const ph = el("div", { class: "ph" });
+  const t = el("span", { class: "pt" });
+  t.textContent = q.q;
+  t.style.textTransform = "none";
+  t.style.fontSize = "1rem";
+  ph.appendChild(t);
+  ph.appendChild(el("span", { class: "pm" }, esc(answered ? "answered" : "looking")));
+  p.appendChild(ph);
+
+  if (q.why) {
+    const w = el("div", { class: "pm" }, "");
+    w.textContent = q.why;
+    w.style.marginTop = "4px";
+    w.style.textTransform = "none";
+    w.style.letterSpacing = "0";
+    w.style.fontStyle = "italic";
+    p.appendChild(w);
+  }
+
+  if (!answered) {
+    const n = el("p", null, "");
+    n.textContent = "Not answered yet.";
+    p.appendChild(n);
+    return p;
+  }
+
+  // Long answers collapse. A five-paragraph answer at the top of the tab is
+  // the same mistake the rail was.
+  const body = el("div", null, "");
+  const full = String(q.answer || "");
+  const short = full.length > 260;
+  const para = (txt) => {
+    const d = el("p", null, "");
+    d.textContent = txt;
+    d.style.color = "var(--ink)";
+    d.style.fontSize = ".93rem";
+    return d;
+  };
+  const render = (expanded) => {
+    body.innerHTML = "";
+    const txt = expanded || !short ? full : full.slice(0, 240).trim() + "…";
+    txt.split("\n\n").filter(Boolean).forEach((chunk) => body.appendChild(para(chunk.trim())));
+    if (short) {
+      const b = el("button", { type: "button", class: "recbtn" }, expanded ? "Less" : "Read it");
+      b.style.marginTop = "8px";
+      b.addEventListener("click", () => render(!expanded));
+      body.appendChild(b);
+    }
+    if (expanded && Array.isArray(q.sources) && q.sources.length) {
+      const s = el("div", { class: "pm" }, "");
+      s.style.marginTop = "8px";
+      s.style.textTransform = "none";
+      s.style.letterSpacing = "0";
+      q.sources.forEach((u) => {
+        const a = el("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, esc(u.slice(0, 70)));
+        a.style.display = "block";
+        a.style.fontSize = ".76rem";
+        s.appendChild(a);
+      });
+      body.appendChild(s);
+    }
+  };
+  render(false);
+  p.appendChild(body);
+  return p;
 }
