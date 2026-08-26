@@ -58,13 +58,22 @@ const BOOKS = ["lecture", "updates"];
 
 // Course jargon whisper would otherwise mangle. This is the vocab.txt idea,
 // moved server-side where the transcription actually happens.
+// Terms added 2026-08-26 after reading David's first real notes back. The
+// misses were specific and they will recur every week, so they are worth the
+// prompt budget: "Vanderpool" for Van der Pol, "Mankowski" for Minkowski,
+// "Bonneville" for Bonmot, "4.11" for PHYS 411.
 const VOCAB = [
-  "PHYS 310", "PHYS 306", "ME 274", "ME 264", "MFET 163", "EPICS",
+  "PHYS 310", "PHYS 306", "PHYS 411", "ME 274", "ME 264", "ME 290", "MFET 163", "EPICS",
   "Lagrangian", "Hamiltonian", "Coriolis", "periapsis", "phase space",
-  "Teamcenter", "Siemens NX", "Gradescope", "Brightspace",
+  "configuration space", "state space", "Van der Pol oscillator",
+  "Minkowski space", "metric tensor", "Einstein summation",
+  "contravariant", "covariant", "superscript", "subscript", "tensor",
+  "simple harmonic oscillator", "nonlinear dynamics", "helix",
+  "Teamcenter", "Siemens NX", "Gradescope", "Brightspace", "Bonmot", "Oberth",
   "metrology", "micrometer", "profilometer", "CNC", "lathe", "sheet metal",
-  "Nolte", "Giannios", "Gibert", "Krousgrill", "Ghoshal", "Fuerst",
+  "Nolte", "Giannios", "Gibert", "Krousgrill", "Ghoshal", "Fuerst", "Beth Hess",
   "kinematics", "kinetics", "impulse", "momentum", "residue theorem",
+  "chain rule", "trig identities", "continuous function", "inverse",
 ].join(", ");
 
 function json(status, body) {

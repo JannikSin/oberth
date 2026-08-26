@@ -38,9 +38,23 @@ const DAYCODE = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
 export const DEFAULT_WINDOW = {
   start: "08:00",
   end: "22:30",
-  maxMinutesPerDay: 300,
+  maxMinutesPerDay: 300,        // weekday ceiling on actual homework
+  maxMinutesWeekend: 420,       // Saturday and Sunday genuinely hold more
   minBlockMinutes: 45,
 };
+
+// A single flat daily cap made every day identical to the planner. After the
+// PHYS 310 end-time correction on 2026-08-26, raw usable time ran Mon 395,
+// Tue 560, Wed 610, Thu 630, Fri 805, Sat/Sun 870 minutes, and a flat 300
+// ceiling erased all of it: Saturday looked exactly like Monday. The ceiling
+// is about how much homework a person will really do in a day, and that is
+// plainly higher on a weekend, so it varies.
+function capFor(iso, w) {
+  const c = dayCodeOf(iso);
+  return (c === "SA" || c === "SU")
+    ? (w.maxMinutesWeekend || w.maxMinutesPerDay)
+    : w.maxMinutesPerDay;
+}
 
 // ---------------------------------------------------------------- efficiency
 // An hour is not an hour. This is the Oberth effect stated as a number, and it
@@ -167,7 +181,7 @@ export function capacityOn(data, iso, win) {
   const w = win || DEFAULT_WINDOW;
   const busy = busyOn(data, iso);
   const eff = freeOn(data, iso, w).reduce((s, g) => s + weightedMinutes(busy, g.start, g.end), 0);
-  return Math.min(eff, w.maxMinutesPerDay);
+  return Math.min(eff, capFor(iso, w));
 }
 
 /** Raw, unweighted gap minutes. Useful for showing the honest wall-clock. */
@@ -304,7 +318,7 @@ export function backwardPass(data, item, win, notBefore) {
     // A 06:59 deadline means the day OF is worth nothing; the work is the
     // night before. Falling through to the previous day is the correct and
     // non-obvious behaviour that makes MFET land on Sunday.
-    let room = Math.min(w.maxMinutesPerDay, capacityOn(data, day, w));
+    let room = Math.min(capFor(day, w), capacityOn(data, day, w));
     const busy = busyOn(data, day);
     const gaps = freeOn(data, day, w)
       .map((g) => ({ start: g.start, end: Math.min(g.end, dueCut) }))

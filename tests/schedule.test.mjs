@@ -19,7 +19,15 @@ const thuCap = S.capacityOn(data, "2026-08-27");
 const friCap = S.capacityOn(data, "2026-08-28");
 const sunCap = S.capacityOn(data, "2026-08-30");
 console.log("     Wed", wedCap, "| Thu", thuCap, "| Fri", friCap, "| Sun", sunCap);
-ok(monCap < wedCap && monCap < thuCap, "Monday is the tightest weekday");
+// Compare RAW usable minutes, not capped. The daily ceiling is about how much
+// homework he will actually do; raw gap time is the honest measure of which
+// day is tightest, and after the 12:45 correction the cap hides the difference.
+const monRaw = S.rawCapacityOn(data, "2026-08-24");
+const wedRaw = S.rawCapacityOn(data, "2026-08-26");
+const friRaw = S.rawCapacityOn(data, "2026-08-28");
+console.log("     raw: Mon", monRaw, "| Wed", wedRaw, "| Fri", friRaw);
+ok(monRaw < wedRaw && monRaw < friRaw, "Monday is the tightest weekday by raw usable time");
+ok(S.capacityOn(data, "2026-08-30") > S.capacityOn(data, "2026-08-26"), "Sunday now holds more than a weekday");
 
 console.log("\n-- MFET 06:59 Tuesday must burn BEFORE Monday night --");
 const items = S.expand(data, "2026-08-24", "2026-09-01");
