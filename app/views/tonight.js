@@ -7,9 +7,16 @@
 //   UPDATES  what was announced. Homework, project milestones, things to buy.
 //            This is where deliverables come from, which is why he never has
 //            to "enter an assignment": he already wrote it down in class.
+//   THINKING what he makes of it. Added 2026-08-26, and it is not a notebook:
+//            it is him talking. "Oberth is the path here and I can just talk
+//            some stuff out through that and see what I want to continue, and
+//            from there we go and change things."
 //
-// Conflating the two would lose exactly the distinction that makes the whole
-// thing work, so they are two lanes with two colours and two destinations.
+// Conflating any two of these would lose exactly the distinctions that make the
+// whole thing work, so they are three lanes with three colours and three
+// destinations. The third one in particular must not be folded into UPDATES:
+// "PHYS 306 took four hours and I do not think the reading is doing anything"
+// is not a deliverable, and filing it as one turns a thought into a chore.
 //
 // The write is ONE TAP, RETROACTIVE, and BATCHED, because that is the only
 // write modality with a non-zero rate in his entire portfolio: 47 ticks on the
@@ -34,6 +41,13 @@ const BOOKS = [
     hint: "read it aloud", placeholder: "Read today's lecture pages out loud, or type them here." },
   { id: "updates", name: "Updates notebook", cls: "updates",
     hint: "homework, projects, buys", placeholder: "Read the updates page: what was assigned, moved, or announced." },
+  // No paper behind this one, which is the point. It exists because he cannot
+  // budget time for courses whose real cost he has not measured, and he would
+  // rather talk that out than log a number. Nothing here is graded, scheduled,
+  // or turned into a card.
+  { id: "thinking", name: "Thinking out loud", cls: "thinking",
+    hint: "how it is going, what to keep",
+    placeholder: "How did today actually go? What took longer than it should have, what is working, what do you want to keep doing?" },
 ];
 
 export function open() {
@@ -41,7 +55,10 @@ export function open() {
   const wrap = document.createElement("div");
 
   const done = readLog(date);
-  wrap.appendChild(mast("Tonight", "read both books", "logged", String(done.length)));
+  // "both books" was true when there were two lanes. The third is not a book
+  // and is not owed, so the line says what is actually asked for.
+  wrap.appendChild(mast("Tonight", "read the books, then say what you make of them",
+                        "logged", String(done.length)));
 
   const lanes = el("div", { class: "lanes" });
   BOOKS.forEach((b) => lanes.appendChild(lane(b, date)));
@@ -186,9 +203,10 @@ function paintLog(box, date) {
     const row = el("div", { class: "logrow" });
     row.appendChild(el("span", { class: "t" }, esc(hhmm(r.at))));
     const x = el("span", { class: "x" });
-    const tag = r.book === "lecture" ? "LECTURE" : "UPDATES";
+    const tag = r.book === "lecture" ? "LECTURE" : r.book === "thinking" ? "THINKING" : "UPDATES";
     const head = el("b", null, esc(tag) + " · ");
-    head.style.color = r.book === "lecture" ? "var(--tel)" : "var(--burn)";
+    head.style.color = r.book === "lecture" ? "var(--tel)"
+      : r.book === "thinking" ? "var(--think)" : "var(--burn)";
     head.style.fontFamily = "var(--din-alt)";
     head.style.fontSize = ".72rem";
     head.style.letterSpacing = ".1em";

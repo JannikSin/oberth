@@ -55,6 +55,13 @@
   --tel:#4FC3E8;
   --tel-soft:rgba(79,195,232,.13);
 
+  /* Muted green is REFLECTION: the thinking lane, which is the one place in
+     this app that asks nothing of him. Deliberately the quietest accent here,
+     because a loud colour would make a thought look like a task. Never amber:
+     amber is ignition and nothing in this lane is a moment to act. */
+  --think:#7FB894;
+  --think-soft:rgba(127,184,148,.13);
+
   /* Red is reserved for the two real cliffs: the MFET attendance cap and any
      flat-zero deadline. Never for ordinary lateness. */
   --cliff:#FF5B49;
@@ -81,6 +88,8 @@
     --burn-edge:rgba(185,106,0,.38);
     --tel:#0F6E92;
     --tel-soft:rgba(15,110,146,.10);
+    --think:#3F7A57;
+    --think-soft:rgba(63,122,87,.10);
     --cliff:#C22D1C;
     --cliff-soft:rgba(194,45,28,.10);
     --good:#1B7A48;
@@ -210,6 +219,7 @@ a{color:var(--tel);text-underline-offset:3px;}
 }
 .lane.lecture{border-top-color:var(--tel);}
 .lane.updates{border-top-color:var(--burn);}
+.lane.thinking{border-top-color:var(--think);}
 .lane .lh{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:11px 14px;border-bottom:1px solid var(--rule);

@@ -56,7 +56,11 @@ const NUDGE_TTL = 60 * 24 * 3600;     // backstop if the laptop never drains
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ID_RE = /^[A-Za-z0-9._@:-]{1,120}$/;
-const BOOKS = ["lecture", "updates"];
+// "thinking" added 2026-08-26: him talking about how a course is actually
+// going, which is neither lecture content nor a deliverable. It is stored
+// like the others and mined for questions like the others, but nothing
+// downstream turns it into a card or a due date.
+const BOOKS = ["lecture", "updates", "thinking"];
 
 // Course jargon whisper would otherwise mangle. This is the vocab.txt idea,
 // moved server-side where the transcription actually happens.
