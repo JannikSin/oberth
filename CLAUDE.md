@@ -2,6 +2,10 @@
 
 Read `README.md` first. This file holds the things that will bite you.
 
+**Read [`DOCTRINE.md`](DOCTRINE.md) too, and treat it as outranking this file.**
+It holds what is true regardless of the code: the job, the prohibitions, the settled
+decisions and their reasons, and the kill conditions.
+
 **Any session that does real work here also updates Crystal**: the
 `Lanes/Academics` note, `System/Changelog`, and `Accomplishments/Log`. That is
 the standing every-vault-reports-to-Crystal rule (L13), not a suggestion.

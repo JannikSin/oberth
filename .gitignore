@@ -8,3 +8,7 @@ data/courses.json
 wrangler.jsonc
 node_modules/
 .wrangler/
+
+# Local wrangler state. cf.json carries a geolocation snapshot (postcode,
+# lat/lon, ASN org) and this is a PUBLIC repo. Found 2026-08-29, trinity.
+worker/.wrangler/

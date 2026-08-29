@@ -5,7 +5,9 @@ worth more at periapsis, where you are deepest in the well and moving fastest.
 The same hour of work is worth more at the right moment. That is the thesis, and
 the whole interface exists to say it.
 
-**Live:** not yet deployed. **Origin when it ships:** `janniksin.github.io/oberth`.
+**Live:** `https://janniksin.github.io/oberth` (verified 200, 2026-08-28). **Worker:** `https://oberth.janniksin.workers.dev`, key-gated (401 without one).
+
+**Governing document: [`DOCTRINE.md`](DOCTRINE.md).** It outranks this file and `CLAUDE.md` where they disagree.
 
 ## What it is for
 
