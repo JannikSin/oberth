@@ -58,5 +58,31 @@ console.log("     Wed periapsis:", tr.periapsis.start+"-"+tr.periapsis.end, "("+
 const trMon = S.trajectory(data, "2026-08-24");
 console.log("     Mon periapsis:", trMon.periapsis ? trMon.periapsis.start+"-"+trMon.periapsis.end+" ("+trMon.periapsis.minutes+"m)" : "(none)");
 
+console.log("\n-- rule windows: ME 264 lab starts ~week 3 (David, 2026-08-31) --");
+const sept = S.expand(data, "2026-08-24", "2026-09-30");
+const prelabs = sept.filter(i => i.ruleId === "me264-prelab").map(i => i.due);
+const memos   = sept.filter(i => i.ruleId === "me264-memo").map(i => i.due);
+console.log("     prelabs:", prelabs.join(", ") || "(none)", "| memos:", memos.join(", ") || "(none)");
+ok(!prelabs.includes("2026-08-31"), "no prelab generated for week 2 (before the lab exists)");
+ok(!prelabs.includes("2026-09-07"), "Labor Day Monday generates nothing");
+ok(prelabs[0] === "2026-09-14", "first prelab lands Sep 14");
+ok(memos[0] === "2026-09-21", "first memo follows the first lab by a week (Sep 21)");
+
+console.log("\n-- measured MFET effort and drop links --");
+const mfet2 = sept.find(i => i.ruleId === "mfet-lab");
+ok(mfet2.effortMin === 180, "MFET lab carries the measured 3h, not the guessed 1.5h");
+ok(mfet2.dropId === "mfet-assign-drops", "MFET lab knows its drop pool");
+const me274 = sept.find(i => i.ruleId === "me274-hw");
+ok(me274.dropId === "me274-hw-drops", "ME 274 homework knows its drop pool");
+
+console.log("\n-- splitByStatus: closed work leaves the demand --");
+const wk = S.expand(data, "2026-08-31", "2026-09-06");
+const someId = wk.find(i => i.effortMin > 0).id;
+const sp = S.splitByStatus(wk, { [someId]: { state: "done" } });
+ok(sp.open.length === wk.length - 1, "one closed item leaves open");
+ok(sp.closed.length === 1 && sp.closed[0].id === someId, "and lands in closed");
+ok(S.splitByStatus(wk, {}).open.length === wk.length, "empty status map closes nothing");
+ok(S.splitByStatus(wk, null).open.length === wk.length, "null status map closes nothing");
+
 console.log("\n" + pass + " passed, " + fail + " failed\n");
 process.exit(fail ? 1 : 0);

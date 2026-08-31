@@ -5,7 +5,8 @@ worth more at periapsis, where you are deepest in the well and moving fastest.
 The same hour of work is worth more at the right moment. That is the thesis, and
 the whole interface exists to say it.
 
-**Live:** not yet deployed. **Origin when it ships:** `janniksin.github.io/oberth`.
+**Live:** `janniksin.github.io/oberth` (GitHub Pages, deploys from `main`).
+Worker: `oberth.janniksin.workers.dev` (transcription relay + sync store).
 
 ## What it is for
 

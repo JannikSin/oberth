@@ -9,7 +9,9 @@
 //
 // This is why the app is called Oberth. A burn is worth more at periapsis.
 
-import { el, esc, mast, zone, footer, empty, todayIso, fmtDay, runway, K, lsGet } from "../../core.js";
+import { el, esc, mast, zone, footer, empty, todayIso, fmtDay, runway, K, lsGet, lsSet, nowIso } from "../../core.js";
+import { queueTick } from "../../sync.js";
+import * as L from "../ledger.js";
 import * as S from "../schedule.js";
 
 let DATA = null;
@@ -21,6 +23,18 @@ async function load() {
   return DATA;
 }
 
+// ----------------------------------------------------------------- status --
+// { instanceId: { state: "done" | "skipped", at, drop? } }. One tap, after
+// the fact, batch catch-up friendly: exactly the write shape the behavioural
+// record says he actually uses. Nothing here requires starting anything.
+const SKEY = K("status");
+const status = () => lsGet(SKEY, {});
+function setStatus(id, entry) {
+  const s = status();
+  if (entry) s[id] = entry; else delete s[id];
+  lsSet(SKEY, s);
+}
+
 export function open(parts) {
   const root = document.getElementById("root");
   const day = (parts && parts[1]) || todayIso();
@@ -30,8 +44,14 @@ export function open(parts) {
     const wrap = document.createElement("div");
 
     const horizon = S.addDays(day, 13);
-    const items = S.expand(data, day, horizon);
-    const planned = S.plan(data, items, null, day);
+    // Reach a week back too: an unfinished deliverable from last week is not
+    // gone, it is OVERDUE, and a retroactive tick needs a row to tap.
+    const items = S.expand(data, S.addDays(day, -7), horizon);
+    const st = status();
+    const split = S.splitByStatus(items, st);
+    const overdue = split.open.filter((i) => i.due < day && i.kind !== "exam");
+    const planned = S.plan(data, split.open.filter((i) => i.due >= day), null, day);
+    const rerender = () => open(parts);
 
     // Everything whose FIRST block is today or already past: the honest answer
     // to "what must I start now so nothing lands late."
@@ -60,16 +80,33 @@ export function open(parts) {
       : "Today never opens up. Anything due tomorrow had to start yesterday."));
     wrap.appendChild(p);
 
+    if (overdue.length) {
+      wrap.appendChild(zone("overdue"));
+      overdue.forEach((it) => wrap.appendChild(deliverable(it, day, true, rerender)));
+    }
+
     wrap.appendChild(zone("start now"));
     if (!startingNow.length) {
       wrap.appendChild(empty("—", "Nothing has to start today", "Every deliverable in the next two weeks still has slack. The next one is listed below."));
     }
-    startingNow.forEach((it) => wrap.appendChild(deliverable(it, day, true)));
+    startingNow.forEach((it) => wrap.appendChild(deliverable(it, day, true, rerender)));
 
     wrap.appendChild(zone("inbound"));
     const inbound = planned.filter((p2) => !startingNow.includes(p2)).slice(0, 14);
     if (!inbound.length) wrap.appendChild(empty("—", "Clear", "Nothing scheduled in the next fortnight."));
-    inbound.forEach((it) => wrap.appendChild(deliverable(it, day, false)));
+    inbound.forEach((it) => wrap.appendChild(deliverable(it, day, false, rerender)));
+
+    // The landed zone: what was ticked or skipped, most recent first, each
+    // with an undo. A mistap must cost one tap to reverse, and a skip's drop
+    // is refunded on the way back so the ledger never drifts.
+    const landed = split.closed
+      .slice()
+      .sort((a, b) => String(st[b.id].at || "").localeCompare(String(st[a.id].at || "")))
+      .slice(0, 10);
+    if (landed.length) {
+      wrap.appendChild(zone("landed"));
+      landed.forEach((it) => wrap.appendChild(closedPanel(it, st[it.id], rerender)));
+    }
 
     wrap.appendChild(footer());
     root.appendChild(wrap);
@@ -151,7 +188,7 @@ function rail(traj) {
 }
 
 // --------------------------------------------------------------- deliverables
-function deliverable(it, day, urgent) {
+function deliverable(it, day, urgent, rerender) {
   const sev = it.severity;
   const cls = sev === "flatzero" || sev === "exam" ? "is-cliff" : urgent ? "is-burn" : "is-tel";
   const p = el("div", { class: "panel " + cls });
@@ -201,5 +238,66 @@ function deliverable(it, day, urgent) {
     n.style.fontSize = ".84rem";
     p.appendChild(n);
   }
+
+  // ---- controls. One tap, after the fact, no starting anything first: the
+  // behavioural constraint in CLAUDE.md is the law here. DONE has no confirm
+  // (undo lives in the landed zone below); SKIP confirms because it spends a
+  // real drop from the same ledger the Courses tab renders.
+  if (it.kind !== "exam" && rerender) {
+    const row = el("div", null, "");
+    row.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px";
+    const done = el("button", { type: "button", class: "recbtn" }, "Done");
+    done.addEventListener("click", () => {
+      setStatus(it.id, { state: "done", at: nowIso() });
+      queueTick(it.id, true, { state: "done" });
+      rerender();
+    });
+    row.appendChild(done);
+
+    const pool = L.dropFor(DATA, it.dropId);
+    if (pool) {
+      const leftN = L.left(pool.id, pool.total);
+      if (leftN > 0) {
+        const skip = el("button", { type: "button", class: "recbtn" }, "Skip · " + leftN + " left");
+        skip.addEventListener("click", () => {
+          if (!confirm("Skip " + it.short + " " + it.label + " and spend a drop? " + (leftN - 1) + " would be left.")) return;
+          L.spend(pool.id, 1);
+          setStatus(it.id, { state: "skipped", at: nowIso(), drop: pool.id });
+          queueTick(it.id, true, { state: "skipped", drop: pool.id });
+          rerender();
+        });
+        row.appendChild(skip);
+      } else {
+        const none = el("span", { class: "pm" }, "no skips left — this one counts");
+        none.style.color = "var(--cliff)";
+        row.appendChild(none);
+      }
+    }
+    p.appendChild(row);
+  }
+  return p;
+}
+
+// A closed deliverable: dimmed, stated plainly, one tap to reverse.
+function closedPanel(it, entry, rerender) {
+  const p = el("div", { class: "panel" });
+  p.style.opacity = ".72";
+  const ph = el("div", { class: "ph" });
+  ph.appendChild(el("span", { class: "pt" }, esc(it.short + " · " + it.label)));
+  ph.appendChild(el("span", { class: "pm" }, entry.state === "skipped" ? "SKIPPED" : "DONE"));
+  p.appendChild(ph);
+  const m = el("div", { class: "pm" }, esc("due " + fmtDay(it.due) + " " + it.dueTime +
+    (entry.state === "skipped" ? "  ·  spent a drop" : "")));
+  m.style.marginTop = "2px";
+  p.appendChild(m);
+  const b = el("button", { type: "button", class: "recbtn" }, "Undo");
+  b.style.marginTop = "8px";
+  b.addEventListener("click", () => {
+    if (entry.state === "skipped" && entry.drop) L.refund(entry.drop, 1);
+    setStatus(it.id, null);
+    queueTick(it.id, false, { state: "undone" });
+    rerender();
+  });
+  p.appendChild(b);
   return p;
 }

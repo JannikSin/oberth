@@ -68,9 +68,9 @@ to start something before the event. Nothing may depend on daily fidelity.
 
 ## Not built yet, in rough priority order
 
-1. **The Cloudflare Worker** (`worker/`). Nothing syncs until it exists and is
-   deployed. The client queues offline and waits, which is correct behaviour,
-   but no data leaves the phone.
+1. ~~**The Cloudflare Worker** (`worker/`).~~ **SHIPPED** (`7297d72`, live relay
+   with Groq transcription; vault confirms it up 2026-08-28). Ticks, notes,
+   grades and nudges sync; the dead-letter rule holds.
 2. **Deck generation from transcripts.** Bonmot's `tools/review_import.mjs` is
    the working pattern; point it at a lecture instead of a paper. Local by
    default via `dispatch.py paddington`, cloud when the laptop is closed.

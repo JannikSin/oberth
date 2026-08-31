@@ -5,7 +5,8 @@
   "termStart": "2026-08-24",
   "termEnd": "2026-12-11",
   "generatedAt": "2026-08-24",
-  "source": "Five syllabi read 2026-08-24 (session guesthouse). Vault copies live in Crystal/Study/Courses/<CODE>/inbox/.",
+  "updatedAt": "2026-08-31",
+  "source": "Five syllabi read 2026-08-24 (session guesthouse). Vault copies live in Crystal/Study/Courses/<CODE>/inbox/. Updated 2026-08-31 (sandbox): MFET effort measured up, ME 264 lab start pushed to ~week 3 per David, drop pools linked to rules.",
   "noClassDays": ["2026-09-07", "2026-10-12", "2026-10-13", "2026-11-25", "2026-11-26", "2026-11-27"],
   "courses": [
     {
@@ -21,7 +22,8 @@
       "ohNote": "The syllabus permits attending ANY ME 274 instructor's hours, not only your own section's.",
       "rules": [
         { "id": "me274-hw", "label": "Homework, 2 problems", "byday": ["MO","WE"], "dueTime": "23:59",
-          "effortH": 1.5, "submit": "Gradescope", "late": "not accepted", "severity": "hard" }
+          "effortH": 1.5, "submit": "Gradescope", "late": "not accepted", "severity": "hard",
+          "dropId": "me274-hw-drops" }
       ],
       "drops": [{ "id": "me274-hw-drops", "label": "Homework drops", "total": 2 }],
       "grading": "HW+quizzes 30% (capped, incl. bonus). Exams 70%: better of (midterm avg) vs final = 45%, worse = 25%. Straight scale, no curve.",
@@ -85,13 +87,15 @@
       "officeHours": [{ "who": "TAs", "days": ["MO","TU","WE","TH"], "start": "17:30", "end": "19:30", "room": "PHYS 022" }],
       "rules": [
         { "id": "mfet-lab", "label": "Lab assignment", "byday": ["TU"], "dueTime": "06:59",
-          "effortH": 1.5, "submit": "Teamcenter or Brightspace", "late": "FLAT ZERO", "severity": "flatzero",
-          "note": "Due 6:59 AM on the lab day, so the real deadline is Monday night, and Monday has no usable gap. This burns Sunday." },
+          "effortH": 3, "submit": "Teamcenter or Brightspace", "late": "FLAT ZERO", "severity": "flatzero",
+          "dropId": "mfet-assign-drops",
+          "note": "Measured 2026-08-30: the weekly set ran to 2 AM. Do NX ON CAMPUS (PHYS 022, TA hrs M-Th 5:30-7:30); AppsAnywhere off campus is unusable. Due 6:59 AM on the lab day, so the real deadline is Monday night. This burns Sunday." },
         { "id": "mfet-quiz", "label": "Chapter quiz", "byday": ["TU"], "dueTime": "06:59",
-          "effortH": 0.3, "submit": "publisher site", "late": "zero", "severity": "hard",
+          "effortH": 0.5, "submit": "publisher site", "late": "zero", "severity": "hard",
+          "dropId": "mfet-quiz-drops",
           "note": "Unlimited attempts, but only the highest of the FIRST TWO is recorded." },
         { "id": "mfet-prep", "label": "Lab prep video quiz", "byday": ["TU"], "dueTime": "06:59",
-          "effortH": 0.2, "submit": "Brightspace", "late": "zero", "severity": "hard" }
+          "effortH": 0.3, "submit": "Brightspace", "late": "zero", "severity": "hard" }
       ],
       "drops": [
         { "id": "mfet-assign-drops", "label": "Assignment drops", "total": 2 },
@@ -123,11 +127,12 @@
       "instructor": { "name": "Jun / Sealy / Shin", "email": "mbgjun@purdue.edu", "note": "ALL office hours are by appointment only. There is no fixed block." },
       "officeHours": [],
       "rules": [
-        { "id": "me264-prelab", "label": "Prelab", "byday": ["MO"], "dueTime": "14:30",
-          "effortH": 0.5, "submit": "Brightspace", "late": "zero unless excused", "severity": "hard" },
-        { "id": "me264-memo", "label": "Lab memo / report", "byday": ["MO"], "dueTime": "14:30",
+        { "id": "me264-prelab", "label": "Prelab", "byday": ["MO"], "dueTime": "14:30", "from": "2026-09-01",
+          "effortH": 0.5, "submit": "Brightspace", "late": "zero unless excused", "severity": "hard",
+          "note": "Lab does not start until ~week 3 (David, 2026-08-31). Mon Sep 7 is Labor Day, so the first lab is likely Sep 14 — VERIFY the real date on Brightspace." },
+        { "id": "me264-memo", "label": "Lab memo / report", "byday": ["MO"], "dueTime": "14:30", "from": "2026-09-15",
           "effortH": 2, "submit": "Brightspace", "late": "10%/day up to a week", "severity": "medium",
-          "note": "Due at the START of the FOLLOWING week's lab, so each Monday lab emits a deliverable due the next Monday." }
+          "note": "Due at the START of the FOLLOWING week's lab, so each Monday lab emits a deliverable due the next Monday. First report follows the first real lab (~Sep 14 + a week); VERIFY on Brightspace." }
       ],
       "drops": [],
       "gate": "You must complete BOTH labs and projects to pass this course. Binary, not weighted.",
