@@ -201,15 +201,24 @@ export function expand(data, fromIso, toIso) {
   const days = eachDay(fromIso, toIso);
   const noClass = new Set(data.noClassDays || []);
 
+  // A rule may carry its own calendar window: `from` for a deliverable that
+  // does not start with the term (ME 264's lab begins ~week 3, per David
+  // 2026-08-31), `until` for one that ends early. Outside the window the
+  // instance simply does not exist, which beats generating it and asking him
+  // to ignore it.
+  const inWindow = (r, d) => (!r.from || d >= r.from) && (!r.until || d <= r.until);
+
   (data.courses || []).forEach((c) => {
     (c.rules || []).forEach((r) => {
       if (Array.isArray(r.dates)) {
-        r.dates.filter((d) => d >= fromIso && d <= toIso).forEach((d) => out.push(mk(c, r, d)));
+        r.dates.filter((d) => d >= fromIso && d <= toIso && inWindow(r, d))
+          .forEach((d) => out.push(mk(c, r, d)));
         return;
       }
       if (!Array.isArray(r.byday)) return;
       days.forEach((d) => {
         if (noClass.has(d)) return;
+        if (!inWindow(r, d)) return;
         if (r.byday.includes(dayCodeOf(d))) out.push(mk(c, r, d));
       });
     });
@@ -246,7 +255,22 @@ function mk(c, r, dateIso) {
     submit: r.submit || null, late: r.late || null,
     severity: r.severity || "medium",
     note: r.note || null, kind: "recurring",
+    dropId: r.dropId || null,
   };
+}
+
+// ------------------------------------------------------------- completion --
+/**
+ * Split expanded items against the status map ({ id: {state} }). `open` is
+ * what the planner should see; `closed` is what was done or skipped. A closed
+ * item must leave the demand entirely: planning around work that no longer
+ * exists is how "start now" cries wolf, and a tracker that cries wolf gets
+ * ignored by week three.
+ */
+export function splitByStatus(items, status) {
+  const open = [], closed = [];
+  items.forEach((it) => ((status && status[it.id]) ? closed : open).push(it));
+  return { open, closed };
 }
 
 // -------------------------------------------------------- 1. PIN, 2. ADMIT --

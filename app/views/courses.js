@@ -11,18 +11,9 @@
 // left, spending one this week costs you nothing" is an approach behaviour.
 // "0 of 2 used" is a report card. Only one of those gets tapped.
 
-import { el, esc, mast, zone, footer, empty, K, lsGet, lsSet, todayIso, courses as courseData } from "../../core.js";
-import { queueTick, deadLetters } from "../../sync.js";
-
-const ledgerKey = K("ledger");
-const ledger = () => lsGet(ledgerKey, {});
-function spend(id, n) {
-  const L = ledger();
-  L[id] = Math.max(0, (L[id] || 0) + n);
-  lsSet(ledgerKey, L);
-  queueTick(id, true, { used: L[id] });
-  return L[id];
-}
+import { el, esc, mast, zone, footer, empty, courses as courseData } from "../../core.js";
+import { deadLetters } from "../../sync.js";
+import { ledger, spend } from "../ledger.js";
 
 const load = () => courseData();
 

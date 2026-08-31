@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import * as S from "../app/schedule.js";
 
-const data = JSON.parse(readFileSync(new URL("../data/courses.json", import.meta.url)));
+// The real rulebook moved to Worker KV (commit 8d1f09c) and this file kept
+// reading the deleted ../data/courses.json, so the suite had been unrunnable
+// since that move. It now runs against a SYNTHETIC fixture that preserves the
+// structure the engine assertions need; the engine is under test, not David's
+// actual timetable.
+const data = JSON.parse(readFileSync(new URL("./fixture.courses.json", import.meta.url)));
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log("  ok   " + msg)) : (fail++, console.log("  FAIL " + msg)); };
 
@@ -65,6 +70,32 @@ ok(tr.periapsis !== null, "Wednesday has a periapsis");
 console.log("     Wed periapsis:", tr.periapsis.start+"-"+tr.periapsis.end, "("+tr.periapsis.minutes+"m)");
 const trMon = S.trajectory(data, "2026-08-24");
 console.log("     Mon periapsis:", trMon.periapsis ? trMon.periapsis.start+"-"+trMon.periapsis.end+" ("+trMon.periapsis.minutes+"m)" : "(none)");
+
+console.log("\n-- rule windows: a lab that starts ~week 3 (David, 2026-08-31) --");
+const sept = S.expand(data, "2026-08-24", "2026-09-30");
+const prelabs = sept.filter(i => i.ruleId === "me264-prelab").map(i => i.due);
+const memos   = sept.filter(i => i.ruleId === "me264-memo").map(i => i.due);
+console.log("     prelabs:", prelabs.join(", ") || "(none)", "| memos:", memos.join(", ") || "(none)");
+ok(!prelabs.includes("2026-08-31"), "no prelab generated before the rule's from date");
+ok(!prelabs.includes("2026-09-07"), "Labor Day Monday generates nothing");
+ok(prelabs[0] === "2026-09-14", "first prelab lands Sep 14");
+ok(memos[0] === "2026-09-21", "first memo follows the first lab by a week (Sep 21)");
+
+console.log("\n-- drop links ride the expansion --");
+const mfet2 = sept.find(i => i.ruleId === "mfet-lab");
+ok(mfet2.effortMin === 180, "MFET lab carries the measured 3h");
+ok(mfet2.dropId === "mfet-assign-drops", "MFET lab knows its drop pool");
+const me274i = sept.find(i => i.ruleId === "me274-hw");
+ok(me274i.dropId === "me274-hw-drops", "homework knows its drop pool");
+
+console.log("\n-- splitByStatus: closed work leaves the demand --");
+const wk = S.expand(data, "2026-08-31", "2026-09-06");
+const someId = wk.find(i => i.effortMin > 0).id;
+const sp = S.splitByStatus(wk, { [someId]: { state: "done" } });
+ok(sp.open.length === wk.length - 1, "one closed item leaves open");
+ok(sp.closed.length === 1 && sp.closed[0].id === someId, "and lands in closed");
+ok(S.splitByStatus(wk, {}).open.length === wk.length, "empty status map closes nothing");
+ok(S.splitByStatus(wk, null).open.length === wk.length, "null status map closes nothing");
 
 console.log("\n" + pass + " passed, " + fail + " failed\n");
 process.exit(fail ? 1 : 0);

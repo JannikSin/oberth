@@ -1,0 +1,76 @@
+{
+  "app": "oberth",
+  "version": 1,
+  "note": "SYNTHETIC fixture. The real rulebook lives in Worker KV and stays out of this public repo (decision 0004 vein: the schedule is David's physical location pattern). This fixture keeps the STRUCTURE the engine tests need: a packed Monday, a 06:59 flat-zero Tuesday, a 4h problem set, drop pools linked to rules, and a lab that starts mid-term. Rooms and names are fake on purpose.",
+  "term": "Fall 2026",
+  "termStart": "2026-08-24",
+  "termEnd": "2026-12-11",
+  "noClassDays": ["2026-09-07", "2026-10-12", "2026-10-13", "2026-11-25", "2026-11-26", "2026-11-27"],
+  "courses": [
+    {
+      "code": "MEX27400", "short": "MEX 274", "title": "Dynamics-shaped course", "credits": 4,
+      "accent": "tel",
+      "meets": [{ "days": ["MO", "WE", "FR"], "start": "10:30", "end": "11:20", "room": "BLDG 100" }],
+      "instructor": { "name": "Prof A", "email": "a@example.edu" },
+      "rules": [
+        { "id": "me274-hw", "label": "Homework, 2 problems", "byday": ["MO", "WE"], "dueTime": "23:59",
+          "effortH": 1.5, "submit": "Gradescope", "late": "not accepted", "severity": "hard",
+          "dropId": "me274-hw-drops" }
+      ],
+      "drops": [{ "id": "me274-hw-drops", "label": "Homework drops", "total": 2 }]
+    },
+    {
+      "code": "PHY31000", "short": "PHY 310", "title": "Exam-heavy physics course", "credits": 3,
+      "accent": "cliff",
+      "meets": [{ "days": ["MO", "WE"], "start": "11:30", "end": "12:45", "room": "BLDG 200" }],
+      "instructor": { "name": "Prof B", "email": "b@example.edu" },
+      "rules": [
+        { "id": "phys310-ps", "label": "Problem set", "byday": ["TU"], "dueTime": "23:59",
+          "effortH": 4, "submit": "LMS", "late": "1 pt/problem", "severity": "soft" }
+      ],
+      "drops": [],
+      "exams": [{ "id": "phys310-m1", "label": "Midterm 1", "date": "2026-09-21", "inClass": true }]
+    },
+    {
+      "code": "MFT16300", "short": "MFT 163", "title": "Flat-zero logistics course", "credits": 3,
+      "accent": "burn",
+      "meets": [
+        { "days": ["MO"], "start": "08:30", "end": "09:20", "room": "BLDG 300", "kind": "lecture" },
+        { "days": ["TU"], "start": "15:30", "end": "17:20", "room": "BLDG 301", "kind": "lab" }
+      ],
+      "instructor": { "name": "Prof C", "email": "c@example.edu" },
+      "rules": [
+        { "id": "mfet-lab", "label": "Lab assignment", "byday": ["TU"], "dueTime": "06:59",
+          "effortH": 3, "submit": "LMS", "late": "FLAT ZERO", "severity": "flatzero",
+          "dropId": "mfet-assign-drops",
+          "note": "Measured effort, not guessed: the 2026-08-30 set ran to 2 AM." },
+        { "id": "mfet-quiz", "label": "Chapter quiz", "byday": ["TU"], "dueTime": "06:59",
+          "effortH": 0.5, "submit": "publisher site", "late": "zero", "severity": "hard",
+          "dropId": "mfet-quiz-drops" }
+      ],
+      "drops": [
+        { "id": "mfet-assign-drops", "label": "Assignment drops", "total": 2 },
+        { "id": "mfet-quiz-drops", "label": "Quiz drops", "total": 2 }
+      ]
+    },
+    {
+      "code": "MEX26400", "short": "MEX 264", "title": "Lab course that starts week 3", "credits": 3,
+      "accent": "tel",
+      "meets": [
+        { "days": ["TU", "TH"], "start": "09:30", "end": "10:20", "room": "BLDG 400", "kind": "lecture" },
+        { "days": ["MO"], "start": "14:30", "end": "17:20", "room": "BLDG 401", "kind": "lab" }
+      ],
+      "instructor": { "name": "Prof D", "email": "d@example.edu" },
+      "rules": [
+        { "id": "me264-prelab", "label": "Prelab", "byday": ["MO"], "dueTime": "14:30", "from": "2026-09-01",
+          "effortH": 0.5, "submit": "LMS", "late": "zero unless excused", "severity": "hard" },
+        { "id": "me264-memo", "label": "Lab memo / report", "byday": ["MO"], "dueTime": "14:30", "from": "2026-09-15",
+          "effortH": 2, "submit": "LMS", "late": "10%/day", "severity": "medium" }
+      ],
+      "drops": []
+    }
+  ],
+  "commitments": [
+    { "label": "club", "meets": [{ "days": ["MO"], "start": "18:30", "end": "20:00" }] }
+  ]
+}
