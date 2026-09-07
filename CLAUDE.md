@@ -10,6 +10,8 @@ decisions and their reasons, and the kill conditions.
 `Lanes/Academics` note, `System/Changelog`, and `Accomplishments/Log`. That is
 the standing every-vault-reports-to-Crystal rule (L13), not a suggestion.
 
+> as-of: 2026-08-29 (fast). The live-state facts in this file (the Worker, what is parked and since when, the empty deck file, the transcription lane) were last written on that date; the Crystal doctor files a ticket when this line is fourteen days old. Move the date when you re-verify them. The measured behavioural constraint and the deliberate-not-bugs list are stable. Rule: Crystal `System/Initial-Conditions`.
+
 ## Provenance
 
 Built 2026-08-24 (session **guesthouse**) after a full OPUS council on whether
@@ -69,6 +71,37 @@ to start something before the event. Nothing may depend on daily fidelity.
 - **Career lives here despite the council's 4-1 vote.** The masthead always
   shows the nearest external deadline, so the council's risk (burying the
   highest-stakes lane) fails loudly rather than quietly.
+
+## The rulebook lives in Worker KV. Do NOT POST the whole file over it.
+
+**Learned the hard way on 2026-09-06 (monolith), by doing it.** `data/courses.json`
+is gitignored (commit `8d1f09c` moved the timetable out of the public repo), so
+the file on this laptop is a *cache*, not the record. The record is the Worker's
+`courses` key.
+
+That means corrections applied straight to KV, which is what
+`tools/patch-courses.mjs` exists to do, are **invisible to the local file**. A
+session that edits the stale local copy and then `POST /courses` with the whole
+document **silently reverts every KV-only patch**. monolith did exactly that and
+wiped 11 corrections from the 2026-08-31 sandbox run, including MFET's measured
+3 h effort and ME 264's `from:` windows. They were restored by re-running
+`patch-courses.mjs`, which is idempotent, but nothing warned anybody: the POST
+returns `{"ok":true}` either way.
+
+**The rule, in order:**
+
+1. `GET /courses` with the laptop key and write the response over
+   `data/courses.json` FIRST, so you are editing the record and not a cache.
+2. Make the edit, `POST /courses`, then `GET` again and read it back. The POST's
+   own response proves nothing.
+3. For rule-level fixes prefer a patch entry in `tools/patch-courses.mjs` over a
+   hand edit. It shows a diff, it is idempotent, and it survives the next
+   full-file write by someone who has not read this.
+4. Run `node tests/schedule.test.mjs` after. It runs against
+   `tests/fixture.courses.json`, a **synthetic** fixture, deliberately, so the
+   engine is under test and not David's timetable. **Do not "fix" that fixture to
+   match reality when a real deadline moves.** monolith started to and it was
+   wrong; the fixture's dates are engine scaffolding.
 
 ## Shipped 2026-08-25
 
