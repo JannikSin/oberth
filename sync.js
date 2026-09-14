@@ -110,7 +110,15 @@ export function queueAsk(question, why) {
   });
 }
 
-const PATHS = { note: "/note", grade: "/grade", tick: "/tick", nudge: "/nudge", ask: "/questions" };
+/** Mark a note as not-his, or put it back. NOT a delete: see the /junk route.
+ *
+ * Whisper will hallucinate again, and a notebook he cannot tidy is a notebook
+ * he stops trusting. This is the tidy, and it destroys nothing. */
+export function queueJunk(date, at, junk) {
+  return enqueue({ type: "junk", date, at, junk: junk !== false, stamped: nowIso() });
+}
+
+const PATHS = { note: "/note", grade: "/grade", tick: "/tick", nudge: "/nudge", ask: "/questions", junk: "/junk" };
 
 let flushing = false;
 

@@ -29,7 +29,7 @@
 // is ask here, answer on the laptop, read the answer on Study.
 
 import { el, esc, mast, zone, empty, footer, api, todayIso, shiftIso, fmtDay, hhmm, lsGet, lsSet, K } from "../../core.js";
-import { queueAsk, syncStamp, uploadEnqueue } from "../../sync.js";
+import { queueAsk, queueJunk, syncStamp, uploadEnqueue } from "../../sync.js";
 import { keepAwake } from "../lib/awake.js";
 import { openMic, describeStream } from "../mic.js";
 
@@ -104,8 +104,19 @@ function paint(box, rows, stale) {
       "Read a notebook aloud on Tonight and it will appear here, transcribed, the moment it comes back."));
     return;
   }
+  // Flagged notes are hidden, not gone. The count is shown so the page never
+  // quietly omits something: a list that hides things without saying so is the
+  // same lie as a tool that repairs ninety percent in silence.
+  const hidden = rows.filter((n) => n.junk).length;
+  if (hidden) {
+    const note = el("div", { class: "lhint" },
+      esc(hidden + " note" + (hidden === 1 ? "" : "s") + " marked not mine, hidden"));
+    note.style.margin = "0 0 10px";
+    box.appendChild(note);
+  }
+
   let lastDay = "";
-  rows.forEach((n) => {
+  rows.filter((n) => !n.junk).forEach((n) => {
     if (n.date !== lastDay) {
       lastDay = n.date;
       box.appendChild(zone(fmtDay(n.date)));
@@ -154,6 +165,20 @@ function noteCard(n) {
     w.style.color = "var(--burn)";
     card.appendChild(w);
   }
+  // The tidy control. One tap, after the fact, reversible: the only write
+  // modality with a non-zero rate in his whole portfolio.
+  const bar = el("div", { class: "recbar" });
+  const junk = el("button", { type: "button", class: "savebtn" }, "Not mine");
+  junk.style.fontSize = ".72rem";
+  junk.addEventListener("click", () => {
+    queueJunk(n.date, n.at, true);
+    n.junk = true;
+    card.style.display = "none";
+    syncStamp("1 note marked not mine");
+  });
+  bar.appendChild(junk);
+  card.appendChild(bar);
+
   return card;
 }
 

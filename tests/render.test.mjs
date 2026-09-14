@@ -146,6 +146,19 @@ ok(/AirPods/.test(rendered), "the microphone it was captured on is named");
 ok(/16kHz/.test(rendered), "with the sample rate");
 ok(/Bluetooth call path/.test(rendered), "and the warning sits on that note");
 
+console.log("\n-- a note can be marked not mine, and it is a FLAG not a delete --");
+const junkBtn = root.findAll(".savebtn").find((b) => b.textContent.includes("Not mine"));
+ok(Boolean(junkBtn), "every note card carries the tidy control");
+junkBtn.click();
+const q2 = JSON.parse(localStorage.getItem("oberth.queue") || "[]");
+const flag = q2.find((x) => x.type === "junk");
+ok(Boolean(flag), "tapping it queues a junk flag");
+ok(flag && flag.junk === true, "marking, not unmarking");
+ok(Boolean(flag && flag.at) && Boolean(flag && flag.date),
+   "addressed by date and timestamp, so it finds exactly one row");
+ok(!q2.some((x) => x.type === "delete" || x.type === "remove"),
+   "and NOTHING in the queue is a delete: the phone never deletes");
+
 console.log("\n-- the Tonight lanes still build --");
 root.innerHTML = "";
 const tonight = await import("../app/views/tonight.js");

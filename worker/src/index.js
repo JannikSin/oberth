@@ -127,7 +127,7 @@ function role(request, env) {
 // an answer he will study from gets researched with sources on the laptop, not
 // typed on a bus. Asking and answering are different privileges and the split
 // is enforced inside the handler, not here.
-const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge", "/questions"];
+const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge", "/questions", "/junk"];
 const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses", "/questions"];
 function phoneAllowed(method, path) {
   if (method === "GET") return PHONE_GET.includes(path);
@@ -621,6 +621,37 @@ export default {
       const v = await getJson(env, "courses", null);
       if (!v) return json(200, { courses: [], missing: true });
       return json(200, v);
+    }
+
+    // ---------------------------------------------------------------- /junk
+    // Mark a note as not-his. NOT a delete, and that is the whole design.
+    //
+    // `phoneAllowed` has said "the phone never deletes" since the first build,
+    // and that rule is right: a tap on a phone in a pocket must never be able
+    // to destroy a night's lecture notes. But whisper WILL hallucinate again
+    // (it stored "For more information, visit <a url>" as a note on
+    // 2026-09-13), and leaving junk in the notebook with no way to clear it
+    // teaches him not to trust the page.
+    //
+    // So the phone FLAGS and nothing is destroyed. The note keeps its text and
+    // its audio blob, the Notes tab stops showing it, question mining can skip
+    // it, and a laptop session can purge or restore later with full context.
+    // Reversible from the same button.
+    if (path === "/junk" && method === "POST") {
+      const b = (await readJson(request)) || {};
+      const date = safeDate(b.date);
+      const at = clip(b.at, 40);
+      const key = "notes:" + date;
+      const rows = await getJson(env, key, []);
+      let hit = 0;
+      rows.forEach((r) => {
+        if (String(r.at || '') !== at) return;
+        hit++;
+        if (b.junk === false) delete r.junk;
+        else r.junk = true;
+      });
+      if (hit) await env.STORE.put(key, JSON.stringify(rows));
+      return json(200, { ok: true, marked: hit, junk: b.junk !== false });
     }
 
     // --------------------------------------------------------------- /vocab
