@@ -1,4 +1,4 @@
-// app.js: the router and the boot. Five tabs, one table, no framework.
+// app.js: the router and the boot. Six tabs, one table, no framework.
 // Each tab module owns its own data, caching and rendering; this file only
 // decides which one gets the screen.
 
@@ -9,8 +9,9 @@ import * as track from "./app/views/track.js";
 import * as study from "./app/views/study.js";
 import * as courses from "./app/views/courses.js";
 import * as career from "./app/views/career.js";
+import * as notes from "./app/views/notes.js";
 
-const ROUTES = { tonight, track, study, courses, career };
+const ROUTES = { tonight, notes, track, study, courses, career };
 
 function route() {
   if (!key()) { keyScreen(""); return; }

@@ -157,6 +157,45 @@ and that would be stored as a night's lecture notes.
 
 **Do not "simplify" this to no_speech_prob.** It was tested and it does not work.
 
+## Recording: the phone's mic, and three things that are load-bearing
+
+**Added 2026-09-13 (zephyr) after a day of mangled transcripts. Full reasoning
+in [`decisions/0007`](decisions/0007-record-on-the-phone-not-the-airpods.md).**
+
+1. **AirPods are the WRONG microphone here and the app now says so.** Opening a
+   mic forces Bluetooth into the phone-call audio path: mono, processed, 16 kHz
+   against the iPhone's 48. Consonants go first, which is why "h backtrack"
+   came back as "age by track dog". Same cause voicetype found on Windows on
+   09-07. `app/mic.js` judges every capture; the label is trusted over the
+   reported sample rate, because Safari can report the AudioContext's rate
+   rather than the hardware's.
+2. **`echoCancellation: false` is not a style choice.** With it on, the browser
+   routes capture through the platform telephony DSP, which downsamples and
+   gates. Do not "tidy" the constraints in `app/mic.js` back to `audio: true`.
+   `autoGainControl` stays ON, deliberately and for a different reason.
+3. **VOCAB has a hard budget and overflow is SILENT.** The whisper prompt caps
+   at 224 tokens and the TAIL is dropped, so an over-budget list quietly loses
+   the newest terms, which are exactly the ones added because they fail. It
+   currently sits at about 159. `tests/mic.test.mjs` fails if it passes 200.
+   **Adding a term means removing one.**
+
+## The screen must not sleep while he is talking
+
+David, 2026-09-13: "I had issues where I was talking and my phone turned off and
+stuff got interrupted and failed and that was very bad."
+
+`app/lib/awake.js` is a **MIRRORED FILE copied byte for byte from Mise**, which
+owns it. `tests/awake.mirror.test.mjs` fails when they drift. Never hand-edit
+one copy: fix both repos, run the test in both. It asks for a real wake lock and
+falls back to a silent frame loop, because iOS Low Power Mode refuses the lock.
+
+**The wake lock is not the fix, it is the first half.** A lock is a request the
+OS may refuse, so the recorder ALSO stops and saves on `visibilitychange`, and
+records in 5-second slices so an abrupt stop has something to save. He loses the
+tail, never the whole thing, and the note says which happened. **Do not remove
+the visibilitychange handler on the grounds that the wake lock makes it
+unnecessary.** It does not.
+
 ## Before you touch the service worker
 
 Bump `CACHE` on ANY change to a precached file. A phone holding old CSS while

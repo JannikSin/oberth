@@ -5,6 +5,10 @@
 .env*
 !.env.example
 data/courses.json
+# The transcription vocabulary carries his course codes, professor surnames,
+# research lab, clubs and target employers. Same reason courses.json is here:
+# this repo is PUBLIC. The real list lives in Worker KV. Added 2026-09-14.
+data/vocab.json
 wrangler.jsonc
 node_modules/
 .wrangler/

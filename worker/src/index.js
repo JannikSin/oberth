@@ -62,24 +62,29 @@ const ID_RE = /^[A-Za-z0-9._@:-]{1,120}$/;
 // downstream turns it into a card or a due date.
 const BOOKS = ["lecture", "updates", "thinking"];
 
-// Course jargon whisper would otherwise mangle. This is the vocab.txt idea,
-// moved server-side where the transcription actually happens.
-// Terms added 2026-08-26 after reading David's first real notes back. The
-// misses were specific and they will recur every week, so they are worth the
-// prompt budget: "Vanderpool" for Van der Pol, "Mankowski" for Minkowski,
-// "Bonneville" for Bonmot, "4.11" for PHYS 411.
-const VOCAB = [
-  "PHYS 310", "PHYS 306", "PHYS 411", "ME 274", "ME 264", "ME 290", "MFET 163", "EPICS",
-  "Lagrangian", "Hamiltonian", "Coriolis", "periapsis", "phase space",
-  "configuration space", "state space", "Van der Pol oscillator",
-  "Minkowski space", "metric tensor", "Einstein summation",
-  "contravariant", "covariant", "superscript", "subscript", "tensor",
-  "simple harmonic oscillator", "nonlinear dynamics", "helix",
-  "Teamcenter", "Siemens NX", "Gradescope", "Brightspace", "Bonmot", "Oberth",
-  "metrology", "micrometer", "profilometer", "CNC", "lathe", "sheet metal",
-  "Nolte", "Giannios", "Gibert", "Krousgrill", "Ghoshal", "Fuerst", "Beth Hess",
-  "kinematics", "kinetics", "impulse", "momentum", "residue theorem",
-  "chain rule", "trig identities", "continuous function", "inverse",
+// Course jargon whisper would otherwise mangle, passed as the `prompt`.
+//
+// THE REAL LIST LIVES IN KV, NOT HERE. Moved 2026-09-14 (zephyr) for exactly
+// the reason `data/courses.json` was moved in commit 8d1f09c: this repo is
+// PUBLIC, and the list had grown to carry his course codes, six professor
+// surnames, his research lab, his clubs and an employer he is applying to.
+// Between them those describe his timetable and his intentions under his real
+// name. Same doctrine as the rulebook: the Pages app is an empty shell and
+// every byte of personal content sits behind the key.
+//
+// What is left below is a FLOOR, not the list: generic engineering and
+// dynamics vocabulary that identifies nobody, used only when KV has no
+// `vocab` key. Push the real one with `node tools/push-vocab.mjs`.
+//
+// BUDGET: whisper caps the prompt at 224 tokens and OVERFLOW IS SILENT, it
+// drops the TAIL. Adding a term means removing one. tests/mic.test.mjs fails
+// past 200.
+const VOCAB_FLOOR = [
+  "Gradescope", "Brightspace", "Lagrangian", "Hamiltonian",
+  "Coriolis", "periapsis", "configuration space", "state space",
+  "metric tensor", "Einstein summation", "contravariant", "covariant",
+  "nonlinear dynamics", "OpenFOAM", "ANSYS", "Siemens NX",
+  "Teamcenter",
 ].join(", ");
 
 function json(status, body) {
@@ -117,7 +122,12 @@ function role(request, env) {
   return null;
 }
 
-const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge"];
+// /questions is on this list as of 2026-09-13 so the phone can ASK. The route
+// itself still refuses a phone-supplied ANSWER, which is the half that matters:
+// an answer he will study from gets researched with sources on the laptop, not
+// typed on a bus. Asking and answering are different privileges and the split
+// is enforced inside the handler, not here.
+const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge", "/questions"];
 const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses", "/questions"];
 function phoneAllowed(method, path) {
   if (method === "GET") return PHONE_GET.includes(path);
@@ -144,14 +154,31 @@ async function readJson(request) {
 // reading "PHYS 310, Lagrangian, Coriolis, Teamcenter..." and be stored as that
 // night's lecture notes. So: check no_speech_prob, and reject any result that
 // is mostly just the prompt echoed.
+// The vocabulary, from KV, with the public floor as the fallback. Cached per
+// isolate: a KV read per transcription is wasteful and the list changes rarely.
+let VOCAB_CACHE = null;
+async function vocab(env) {
+  if (VOCAB_CACHE) return VOCAB_CACHE;
+  const v = await getJson(env, "vocab", null);
+  const list = v && Array.isArray(v.terms) && v.terms.length ? v.terms : null;
+  VOCAB_CACHE = list ? list.join(", ") : VOCAB_FLOOR;
+  return VOCAB_CACHE;
+}
+
 async function transcribe(env, blob, filename) {
   if (!env.GROQ_API_KEY) return { ok: false, why: "no GROQ_API_KEY set on the Worker" };
   const fd = new FormData();
   fd.append("file", blob, filename || "read.webm");
   fd.append("model", "whisper-large-v3-turbo");
   fd.append("response_format", "verbose_json");
-  fd.append("prompt", VOCAB);
+  fd.append("prompt", await vocab(env));
   fd.append("temperature", "0");
+  // Pin the language. Without it whisper spends capacity deciding what
+  // language this is, and a low-quality capture is exactly when it decides
+  // wrong. The 2026-09-13 note that came back as an Australian promo URL is
+  // the signature of that: an English speaker, a degraded mic, and a model
+  // free to reach for any language's caption-farm boilerplate.
+  fd.append("language", "en");
 
   let res;
   try {
@@ -208,10 +235,35 @@ async function transcribe(env, blob, filename) {
     return { ok: false, why: "that recording was too unclear to keep", duration: dur, signal: "avg_logprob " + avgLogprob.toFixed(2) };
   }
 
+  // Caption-farm promos. These are the SAME failure as "Thank you", from the
+  // same YouTube training data, but neither length nor confidence catches
+  // them. MEASURED 2026-09-13 (zephyr), from a note that was actually STORED:
+  // a stray recording in the UPDATES lane came back as
+  //   "For more information, visit www.feyyout.com.au"
+  // and it survived every gate above. Seven words, so the < 15 rule applied,
+  // but avg_logprob was healthy (the model is confident when it recites its
+  // own training data), and words/second cleared 0.5. It then sat in his
+  // notebook between two real notes, which is exactly the thing this gate
+  // exists to prevent: a night's notes he cannot trust is worse than none.
+  //
+  // What separates it is SHAPE, not quality. A short transcript that is a
+  // promo stem, or that is mostly a web address, is never something he said
+  // into this app. Rejection is not destructive: the blob is kept, the failed
+  // note is filed with its reason, and the phone is told why.
+  const PROMO = /(for more information|more info(rmation)?,? visit|visit (our |the )?(website|www)|thanks? for watching|please subscribe|subscribe to (our|the)|subtitles? (by|provided)|captions? by|transcription by|translated by|amara\.org|patreon|all rights reserved|copyright ©)/;
+  const DOMAINISH = /\b(?:www\.[a-z0-9-]{2,}|[a-z0-9-]{3,}\.(?:com|org|net|io|tv|me|co))\b/;
+  const lower = text.toLowerCase();
+  if (allWords.length < 15 && PROMO.test(lower)) {
+    return { ok: false, why: "no speech in that recording", duration: dur, signal: "caption-farm promo" };
+  }
+  if (allWords.length < 12 && DOMAINISH.test(lower)) {
+    return { ok: false, why: "no speech in that recording", duration: dur, signal: "caption-farm url" };
+  }
+
   // Prompt echo: given non-speech, the model will sometimes hand the
   // vocabulary list straight back. Storing that as a night's lecture notes
   // would be worse than storing nothing.
-  const vocabWords = new Set(VOCAB.toLowerCase().split(/[,\s]+/).filter((w) => w.length > 3));
+  const vocabWords = new Set((await vocab(env)).toLowerCase().split(/[,\s]+/).filter((w) => w.length > 3));
   const words = allWords.filter((w) => w.length > 3);
   const echoed = words.length ? words.filter((w) => vocabWords.has(w)).length / words.length : 0;
   if (words.length < 40 && echoed > 0.5) {
@@ -289,6 +341,47 @@ async function getJson(env, key, fallback) {
 async function appendNote(env, date, record) {
   const key = "notes:" + date;
   const rows = await getJson(env, key, []);
+
+  // Double-submit guard.
+  //
+  // FIRST DIAGNOSIS, 2026-09-13, and it was HALF RIGHT: the UPDATES lane held
+  // "Okay. There's a lot of things to do..." twice, 39 seconds apart, byte for
+  // byte, which reads as one tap that looked like it did nothing, tapped again.
+  // The guard written that day was time-boxed to five minutes so a genuinely
+  // repeated thought later in the day would still land.
+  //
+  // CORRECTED 2026-09-14, by the same note appearing a THIRD time at 21:09,
+  // five hours after the first two and therefore outside that window. Three
+  // notes arrived within five SECONDS of each other at 21:09, which is the
+  // offline upload queue flushing a backlog, not a person talking. So the
+  // duplicate was never a double tap at all: it is the upload retrying, and
+  // `at` on an audio note is stamped by this Worker at UPLOAD time rather than
+  // at recording time, so a time window compares the wrong two clocks.
+  //
+  // THE RULE THAT ACTUALLY HOLDS: two separate recordings of a human being
+  // talking do not transcribe to byte-identical text. Whisper is not that
+  // repeatable and he does not speak that repeatably. So for an AUDIO note,
+  // identical text on the same day is a re-delivery however far apart the
+  // timestamps are, and the window is dropped entirely.
+  //
+  // Typed notes keep a window, because a person really can type the same short
+  // line twice on purpose, and typing carries no transcription noise to tell
+  // one from the other.
+  //
+  // Nothing is destroyed either way: the audio blob is stored before this runs.
+  const text = String(record.text || "").trim();
+  if (text) {
+    const now = Date.parse(record.at || "") || Date.now();
+    const isAudio = record.kind === "audio";
+    const dupe = rows.some((r) => {
+      if (r.book !== record.book) return false;
+      if (String(r.text || "").trim() !== text) return false;
+      if (isAudio && r.kind === "audio") return true;   // same KV day key
+      return Math.abs((Date.parse(r.at || "") || 0) - now) < 5 * 60 * 1000;
+    });
+    if (dupe) return rows.length;
+  }
+
   rows.push(record);
   await env.STORE.put(key, JSON.stringify(rows));
   return rows.length;
@@ -381,13 +474,24 @@ export default {
         await appendNote(env, date, {
           book, kind: "audio", text: "", at: new Date().toISOString(),
           seconds: meta.seconds || null, blobId, failed: t.why,
+          mic: clip(meta.mic, 80) || null,
+          hz: Number(meta.hz) > 0 ? Number(meta.hz) : null,
+          micLevel: clip(meta.micLevel, 16) || null,
+          interrupted: meta.interrupted ? true : undefined,
         });
         return json(200, { ok: false, why: t.why, blobId });
       }
 
+      // The capture conditions ride with the note. Without them a bad
+      // transcript is an argument; with them it is a lookup. See app/mic.js.
       const n = await appendNote(env, date, {
         book, kind: "audio", text: t.text, at: new Date().toISOString(),
         seconds: meta.seconds || null, duration: t.duration, blobId,
+        mic: clip(meta.mic, 80) || null,
+        hz: Number(meta.hz) > 0 ? Number(meta.hz) : null,
+        micLevel: clip(meta.micLevel, 16) || null,
+        mime: clip(meta.mime, 40) || null,
+        interrupted: meta.interrupted ? true : undefined,
       });
       const mined = await mineQuestions(env, t.text, { date, book });
       return json(200, { ok: true, text: t.text, duration: t.duration, stored: n, questions: mined.length });
@@ -459,9 +563,15 @@ export default {
     // The laptop writes answers back. This is deliberately laptop-only: an
     // answer he will study from gets researched with sources, not guessed.
     if (path === "/questions" && method === "POST") {
-      if (who !== "laptop") return json(403, { error: "laptop only" });
       const b = (await readJson(request)) || {};
       const store = await getJson(env, "questions", []);
+      // The phone may add a question and nothing else. Answering stays
+      // laptop-only for the reason above the route: a studied answer is
+      // researched, not guessed, and a phone that could write `answer` would
+      // eventually write one.
+      if (who !== "laptop" && (Array.isArray(b.answers) || (Array.isArray(b.add) && b.add.some((a) => a && a.answer)))) {
+        return json(403, { error: "the phone can ask, not answer" });
+      }
       if (Array.isArray(b.answers)) {
         const byId = new Map(store.map((x) => [x.id, x]));
         b.answers.forEach((a) => {
@@ -474,15 +584,17 @@ export default {
         });
       }
       if (Array.isArray(b.add)) {
+        const mayAnswer = who === "laptop";
         b.add.forEach((a) => store.push({
           id: "q" + Date.now() + Math.random().toString(36).slice(2, 6),
           q: clip(a.q, 400), why: clip(a.why, 400),
           date: safeDate(a.date), book: clip(a.book, 20) || "lecture",
           askedAt: new Date().toISOString(),
-          status: a.answer ? "answered" : "open",
-          answer: a.answer ? clip(a.answer, 6000) : null,
-          sources: Array.isArray(a.sources) ? a.sources.slice(0, 8).map((u) => clip(u, 300)) : null,
-          answeredAt: a.answer ? new Date().toISOString() : null,
+          asked: who === "laptop" ? "session" : "david",
+          status: (mayAnswer && a.answer) ? "answered" : "open",
+          answer: (mayAnswer && a.answer) ? clip(a.answer, 6000) : null,
+          sources: mayAnswer && Array.isArray(a.sources) ? a.sources.slice(0, 8).map((u) => clip(u, 300)) : null,
+          answeredAt: (mayAnswer && a.answer) ? new Date().toISOString() : null,
         }));
       }
       await env.STORE.put("questions", JSON.stringify(store));
@@ -509,6 +621,22 @@ export default {
       const v = await getJson(env, "courses", null);
       if (!v) return json(200, { courses: [], missing: true });
       return json(200, v);
+    }
+
+    // --------------------------------------------------------------- /vocab
+    // Personal content, so it is laptop-only to write and never shipped in
+    // the repo. The phone never needs to read it: transcription is server side.
+    if (path === "/vocab" && method === "POST") {
+      if (who !== "laptop") return json(403, { error: "laptop only" });
+      const b = (await readJson(request)) || {};
+      if (!b || !Array.isArray(b.terms)) return json(400, { error: "terms[] required" });
+      await env.STORE.put("vocab", JSON.stringify({ terms: b.terms.map((t) => clip(t, 60)) }));
+      VOCAB_CACHE = null;
+      return json(200, { ok: true, terms: b.terms.length });
+    }
+    if (path === "/vocab" && method === "GET") {
+      if (who !== "laptop") return json(403, { error: "laptop only" });
+      return json(200, await getJson(env, "vocab", { terms: [] }));
     }
 
     // -------------------------------------------------------------- /career

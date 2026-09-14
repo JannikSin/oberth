@@ -90,7 +90,27 @@ export function queueNudge(text) {
   return enqueue({ type: "nudge", text, date: todayIso(), at: nowIso() });
 }
 
-const PATHS = { note: "/note", grade: "/grade", tick: "/tick", nudge: "/nudge" };
+/** A question HE asked, rather than one mined out of his notes.
+ *
+ * Added 2026-09-13 on his ask: "I know we used to have something that was like
+ * 'ask me anything' and now that doesn't seem to exist." It never did exist.
+ * What exists is the mining path, which reads questions OUT of a transcript
+ * after the fact and cannot be aimed. This is the other direction.
+ *
+ * It rides the same FIFO as everything else, so asking works on the bus with
+ * no signal and lands when there is one. `why` records where he was standing
+ * when he asked, because a question without its occasion is much harder to
+ * answer usefully three days later.
+ */
+export function queueAsk(question, why) {
+  return enqueue({
+    type: "ask",
+    add: [{ q: question, why: why || "", date: todayIso(), book: "thinking" }],
+    date: todayIso(), at: nowIso(),
+  });
+}
+
+const PATHS = { note: "/note", grade: "/grade", tick: "/tick", nudge: "/nudge", ask: "/questions" };
 
 let flushing = false;
 

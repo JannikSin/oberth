@@ -301,8 +301,11 @@ a{color:var(--tel);text-underline-offset:3px;}
 
 /* --------------------------------------------------------------- tabbar ----
    A readout, not a dock. Condensed caps, an amber burn tick over the active
-   slot, one hairline. No icons: five words are faster to read than five
-   glyphs, and it keeps the bar unlike anything else in the fleet.            */
+   slot, one hairline. No icons: six words are faster to read than six
+   glyphs, and it keeps the bar unlike anything else in the fleet.
+   SIX slots since 2026-09-13 (Notes). The sixth was always planned for, but
+   six seven-letter words at .82rem overflow a 375pt iPhone by a hair, so the
+   type steps down below 400px rather than letting a label wrap or clip.      */
 #tabbar{
   position:fixed;left:0;right:0;bottom:0;z-index:40;
   display:flex;
@@ -325,6 +328,10 @@ a{color:var(--tel);text-underline-offset:3px;}
 }
 #tabbar button[aria-current="true"]{color:var(--ink);}
 #tabbar button[aria-current="true"] .tk{width:26px;}
+@media (max-width:400px){
+  #tabbar button{font-size:.72rem;letter-spacing:.06em;padding-left:0;padding-right:0;}
+  #tabbar button[aria-current="true"] .tk{width:20px;}
+}
 
 /* ---------------------------------------------------- the improvement bubble
    David asked for the improvement notes on this app too. Same idea as Crystal's

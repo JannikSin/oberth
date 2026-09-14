@@ -26,6 +26,8 @@
 
 import { el, esc, mast, zone, empty, footer, K, lsGet, lsSet, todayIso, nowIso, hhmm, isTab } from "../../core.js";
 import { queueNote, uploadEnqueue, syncStamp, uploadStatus } from "../../sync.js";
+import { keepAwake } from "../lib/awake.js";
+import { openMic, describeStream } from "../mic.js";
 
 const logKey = (d) => K("log." + d);
 const readLog = (d) => lsGet(logKey(d), []);
@@ -112,8 +114,37 @@ function lane(book, date) {
   // MediaRecorder, not the Web Speech API: speech recognition is unreliable in
   // an installed iOS PWA and dies without network. Recording always works, the
   // bytes are kept on the phone until they land, and transcription happens
-  // server-side where the Deepgram vocabulary already lives.
-  let mr = null, chunks = [], t0 = 0, timer = null;
+  // server-side where the vocabulary already lives.
+  //
+  // THREE THINGS WERE ADDED 2026-09-13 (zephyr) AFTER DAVID LOST A RECORDING:
+  // "I had issues where I was talking and my phone turned off and stuff got
+  // interrupted and failed and that was very bad."
+  //
+  //   1. THE SCREEN IS HELD while recording, by the same module Mise uses, so
+  //      the phone does not lock under him mid-sentence.
+  //   2. THE RECORDING IS SAVED IF IT IS INTERRUPTED ANYWAY. This is the part
+  //      that actually answers his complaint, because a wake lock is a request
+  //      the OS may refuse and Low Power Mode does refuse it. If the page is
+  //      hidden while recording, the recorder is stopped deliberately and what
+  //      was captured so far is uploaded. He loses the tail, never the whole
+  //      thing, and he is told which happened.
+  //   3. IT RECORDS IN CHUNKS. A timeslice means data has already left the
+  //      encoder every few seconds, so an abrupt stop has something to save
+  //      rather than an empty buffer.
+  let mr = null, chunks = [], t0 = 0, timer = null, release = null, mic = null;
+
+  const stopHold = () => { if (release) { try { release(); } catch (e) {} release = null; } };
+
+  // If the phone locks or he switches apps, save rather than lose. Bound once
+  // per lane and harmless when nothing is recording.
+  const onHidden = () => {
+    if (document.visibilityState === "hidden" && mr && mr.state === "recording") {
+      interrupted = true;
+      try { mr.stop(); } catch (e) {}
+    }
+  };
+  let interrupted = false;
+  document.addEventListener("visibilitychange", onHidden);
 
   rec.addEventListener("click", async () => {
     if (mr && mr.state === "recording") {
@@ -125,12 +156,20 @@ function lane(book, date) {
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await openMic(navigator.mediaDevices);
+      mic = describeStream(stream);
       chunks = [];
-      mr = new MediaRecorder(stream);
+      interrupted = false;
+      // 128 kbps mono opus is well above what speech needs and still small:
+      // a 10-minute read is about 9 MB, inside the Worker's upload cap. The
+      // default on some builds is 32 kbps, which is audibly worse.
+      let opts = { audioBitsPerSecond: 128000 };
+      try { mr = new MediaRecorder(stream, opts); }
+      catch (e) { mr = new MediaRecorder(stream); }
       mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
       mr.onstop = async () => {
         clearInterval(timer);
+        stopHold();
         stream.getTracks().forEach((t) => t.stop());
         rec.setAttribute("data-on", "0");
         lbl.textContent = "Read aloud";
@@ -139,26 +178,58 @@ function lane(book, date) {
         if (!chunks.length) { note.textContent = "Nothing was captured."; return; }
         const blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
         try {
-          await uploadEnqueue(blob, { book: book.id, date, seconds: secs, at: nowIso() });
+          await uploadEnqueue(blob, {
+            book: book.id, date, seconds: secs, at: nowIso(),
+            // The capture conditions ride along so a bad transcript can be
+            // explained later instead of argued about.
+            mic: mic ? mic.label : null,
+            hz: mic ? mic.hz : null,
+            micLevel: mic ? mic.level : null,
+            mime: mr.mimeType || null,
+            interrupted: interrupted || undefined,
+          });
           // Stopping SENDS. Crystal learned this the hard way: David kept
           // pressing Send afterwards because nothing said so.
-          note.textContent = "Sent (" + secs + "s). It transcribes on the server; the text lands here when it returns.";
+          note.textContent = interrupted
+            ? "Your phone locked or you left the app, so this was saved at " + secs
+              + "s and sent. Nothing before that point was lost."
+            : "Sent (" + secs + "s). It transcribes on the server; the text lands here when it returns.";
           appendLog(date, { book: book.id, kind: "audio", seconds: secs, at: nowIso() });
           refreshLog(date);
         } catch (e) {
           note.textContent = "Could not store the recording on this phone.";
         }
       };
-      mr.start();
+      // Five-second slices. Small enough that an interruption costs almost
+      // nothing, large enough that the encoder is not churning.
+      mr.start(5000);
       t0 = Date.now();
       rec.setAttribute("data-on", "1");
       lbl.textContent = "Stop";
+
+      // Hold the screen for as long as this runs. The module prefers a real
+      // wake lock and falls back to a silent frame loop when the OS refuses
+      // one, which is what Low Power Mode does.
+      let holdNote = "";
+      release = keepAwake((st) => {
+        holdNote = st.held ? "" : " " + st.reason;
+        paintNote();
+      });
+
+      const paintNote = () => {
+        const m = mic && mic.warn ? "\n\n" + mic.warn : "";
+        note.textContent = "Recording, screen held."
+          + (mic ? " " + mic.short + "." : "")
+          + holdNote + m;
+      };
+
       timer = setInterval(() => {
         const s = Math.round((Date.now() - t0) / 1000);
         elapsed.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
       }, 250);
-      note.textContent = "Recording. Stopping saves and sends it.";
+      paintNote();
     } catch (e) {
+      stopHold();
       note.textContent = "Microphone permission was refused.";
     }
   });
