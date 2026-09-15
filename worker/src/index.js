@@ -128,7 +128,7 @@ function role(request, env) {
 // typed on a bus. Asking and answering are different privileges and the split
 // is enforced inside the handler, not here.
 const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge", "/questions", "/junk"];
-const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses", "/questions"];
+const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses", "/questions", "/outstanding"];
 function phoneAllowed(method, path) {
   if (method === "GET") return PHONE_GET.includes(path);
   if (method === "POST") return PHONE_POST.includes(path);
@@ -621,6 +621,78 @@ export default {
       const v = await getJson(env, "courses", null);
       if (!v) return json(200, { courses: [], missing: true });
       return json(200, v);
+    }
+
+    // ------------------------------------------------------------- /handled
+    // THE DRAIN LEDGER. David's ruling 2026-09-14: "need to track what had
+    // been handled."
+    //
+    // The gap it closes is not storage, it is that ACTIONED was not a state
+    // anything tracked. A session drained the notebook by reading it, and on
+    // 2026-09-13 a session read ten of thirteen notes and nobody found out,
+    // including the note asking whether this was reliable. Nothing can be
+    // silently missed once outstanding is a thing you can query.
+    //
+    // Laptop-only to WRITE, because handled means a session did the work, and
+    // the phone cannot know that. The phone READS it through /note like any
+    // other field, so the app can show what is still outstanding.
+    //
+    // `triage` rides the same route: it is the other half of his ruling ("do 2
+    // as well"), a worker model's sorting of a note, and it is stored beside
+    // the note rather than in a separate file so it cannot drift from it.
+    if (path === "/handled" && method === "POST") {
+      if (who !== "laptop") return json(403, { error: "laptop only" });
+      const b = (await readJson(request)) || {};
+      const date = safeDate(b.date);
+      const key = "notes:" + date;
+      const rows = await getJson(env, key, []);
+      const at = clip(b.at, 40);
+      let hit = 0;
+      rows.forEach((r) => {
+        if (String(r.at || "") !== at) return;
+        hit++;
+        if (b.handled === false) {
+          delete r.handled;
+        } else if (b.handled === true) {
+          r.handled = {
+            at: new Date().toISOString(),
+            by: clip(b.by, 40) || "session",
+            why: clip(b.why, 400) || null,
+          };
+        }
+        if (b.triage && typeof b.triage === "object") {
+          r.triage = {
+            lane: clip(b.triage.lane, 40) || null,
+            app: clip(b.triage.app, 40) || null,
+            urgency: clip(b.triage.urgency, 16) || null,
+            summary: clip(b.triage.summary, 300) || null,
+            by: clip(b.triage.by, 40) || "paddington",
+            at: new Date().toISOString(),
+          };
+        }
+      });
+      if (hit) await env.STORE.put(key, JSON.stringify(rows));
+      return json(200, { ok: true, marked: hit });
+    }
+
+    // ------------------------------------------------------------ /outstanding
+    // Everything not yet handled, across the recent days, in one call. This is
+    // the query that makes the guarantee real: a session asks what is owed
+    // rather than trusting itself to have read everything.
+    if (path === "/outstanding" && method === "GET") {
+      const days = Math.min(60, Math.max(1, Number(url.searchParams.get("days") || 14)));
+      const today = new Date();
+      const out = [];
+      for (let i = 0; i < days; i++) {
+        const d = new Date(today.getTime() - i * 86400000).toISOString().slice(0, 10);
+        const rows = await getJson(env, "notes:" + d, []);
+        rows.forEach((r) => {
+          if (r.handled || r.junk) return;
+          if (!String(r.text || "").trim()) return;
+          out.push(Object.assign({ date: d }, r));
+        });
+      }
+      return json(200, { days, outstanding: out.length, notes: out });
     }
 
     // ---------------------------------------------------------------- /junk
