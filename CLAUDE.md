@@ -10,7 +10,7 @@ decisions and their reasons, and the kill conditions.
 `Lanes/Academics` note, `System/Changelog`, and `Accomplishments/Log`. That is
 the standing every-vault-reports-to-Crystal rule (L13), not a suggestion.
 
-> as-of: 2026-08-29 (fast). The live-state facts in this file (the Worker, what is parked and since when, the empty deck file, the transcription lane) were last written on that date; the Crystal doctor files a ticket when this line is fourteen days old. Move the date when you re-verify them. The measured behavioural constraint and the deliberate-not-bugs list are stable. Rule: Crystal `System/Initial-Conditions`.
+> as-of: 2026-10-02 (fast; Worker answering, deck file empty, both parks still standing, re-checked by prandtl). The live-state facts in this file (the Worker, what is parked and since when, the empty deck file, the transcription lane) were last written on that date; the Crystal doctor files a ticket when this line is fourteen days old. Move the date when you re-verify them. The measured behavioural constraint and the deliberate-not-bugs list are stable. Rule: Crystal `System/Initial-Conditions`.
 
 ## Provenance
 
@@ -115,11 +115,34 @@ section below.
    the working pattern; point it at a lecture instead of a paper. Local by
    default via `dispatch.py paddington`, cloud when the laptop is closed.
    **Parked by David 2026-08-25**, deliberately, pending a decision on shape.
-2. **PHYS 310 content.** Midterm 1 is 2026-09-21, the course is 90% exams on a
-   curve with no drops, and there is no study material anywhere.
+2. **PHYS 310 content in this app.** The course is 90% exams on a curve with no
+   drops. Midterm 1 was 2026-09-21. Study material now exists OUTSIDE this app:
+   a practice set in `Projects\me274-prep\phys310\practice\` (shrike) and HW5
+   solutions beside it (checked 2026-10-02). None of it is in Oberth.
    **Parked by David 2026-08-25.**
 3. Clubs and research sections.
 4. Light mode is defined in tokens but has never been looked at on a device.
+
+## The night-before pre-read (added 2026-10-05, schlieren)
+
+David: "study should be in oberth i dont use oberth but i need to and that is
+the whole point of app." So the class pre-read lives at the top of Tonight
+(`app/views/brief.js`), and the 9 pm phone push deep-links to
+`#/tonight/tomorrow`, which opens it.
+
+- **Built on the laptop, not here.** `Projects\class-prep\tools\nightly.py`
+  reads `class-prep\topics.json` (the per-course, per-day topic map pulled from
+  Brightspace), has Sonnet draft the LaTeX and Opus check it, compiles the PDF,
+  and `POST /brief` with the laptop key. Spec: Crystal `System/Class-Prep`.
+- **Pages are images on purpose.** The math arrives exactly as typeset, so the
+  app needs no math library. The Worker accepts only `data:image/png|jpeg`.
+- **`/brief` is laptop-write, phone-read.** `GET /brief?from=DATE` returns the
+  first pre-read on or after that day, so Friday night shows Monday's. Ticks
+  (got / shaky / lost) go to `/brief/tick`, one tap, after the fact.
+- **The offline copy is in the Cache API (`oberth-brief-v1`), never
+  localStorage**, which is one 5 MB box shared by every app on the origin. The
+  SW's cleanup only matches `oberth-shell-`, so it survives version bumps.
+- Test: `node tests/brief.test.mjs` (Worker routes on a fake KV, plus the card).
 
 ## Transcription: Groq, not Deepgram
 

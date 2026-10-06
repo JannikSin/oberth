@@ -17,7 +17,7 @@
 // ============================================================================
 
 const CACHE_PREFIX = "oberth-shell-";
-const CACHE = CACHE_PREFIX + "v12";
+const CACHE = CACHE_PREFIX + "v13";
 
 // Bump CACHE on ANY change to a precached file. A phone holding old CSS while
 // fetching new markup renders a broken page, and the user cannot tell that
@@ -35,6 +35,7 @@ const PRECACHE = [
   "./app/ledger.js",
   "./app/srs.js",
   "./app/views/tonight.js",
+  "./app/views/brief.js",
   "./app/views/notes.js",
   "./app/mic.js",
   "./app/lib/awake.js",

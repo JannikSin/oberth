@@ -50,6 +50,8 @@ const CORS = {
 const NOSNIFF = "x-content-type-options";
 
 const MAX_BODY = 512 * 1024;
+const BRIEF_CAP = 6 * 1024 * 1024;          // a pre-read is a few page images
+const BRIEF_TTL = 60 * 60 * 24 * 150;       // the rest of the term, as revision material
 const AUDIO_CAP = 12 * 1024 * 1024;   // ~20 min of opus; a long read-aloud
 const AUDIO_TTL = 7 * 24 * 3600;      // keep the bytes a week in case transcription was wrong
 const NUDGE_TTL = 60 * 24 * 3600;     // backstop if the laptop never drains
@@ -127,8 +129,9 @@ function role(request, env) {
 // an answer he will study from gets researched with sources on the laptop, not
 // typed on a bus. Asking and answering are different privileges and the split
 // is enforced inside the handler, not here.
-const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge", "/questions", "/junk"];
-const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses", "/questions", "/outstanding"];
+// /brief is read-only from the phone; only the laptop writes a pre-read.
+const PHONE_POST = ["/note", "/audio", "/grade", "/tick", "/nudge", "/questions", "/junk", "/brief/tick"];
+const PHONE_GET = ["/note", "/grade", "/tick", "/career", "/courses", "/questions", "/outstanding", "/brief"];
 function phoneAllowed(method, path) {
   if (method === "GET") return PHONE_GET.includes(path);
   if (method === "POST") return PHONE_POST.includes(path);
@@ -752,6 +755,60 @@ export default {
     }
     if (path === "/career" && method === "GET") {
       return json(200, await getJson(env, "career", { items: [] }));
+    }
+
+    // ---------------------------------------------------------------- /brief
+    // The night-before pre-read (Crystal System/Class-Prep, 2026-10-05 schlieren).
+    // The laptop builds a typeset PDF and posts it here as page IMAGES, so the
+    // math arrives exactly as typeset and the phone needs no math library. One
+    // record per class day, kept for the term: a semester of pre-reads is
+    // exam revision material.
+    if (path === "/brief" && method === "POST") {
+      const len = Number(request.headers.get("content-length") || 0);
+      if (len > BRIEF_CAP) return json(200, { ok: false, why: "brief too large" });
+      let b;
+      try { b = await request.json(); } catch (e) { return json(200, { ok: false, why: "bad json" }); }
+      if (!b || !DATE_RE.test(String(b.date || ""))) return json(200, { ok: false, why: "no date" });
+      const pages = (Array.isArray(b.pages) ? b.pages : [])
+        .filter((p) => typeof p === "string" && /^data:image\/(png|jpeg);base64,/.test(p)).slice(0, 8);
+      const rec = {
+        date: b.date,
+        built: clip(b.built, 30) || new Date().toISOString(),
+        title: clip(b.title, 200),
+        classes: (Array.isArray(b.classes) ? b.classes : []).slice(0, 12).map((c) => ({
+          code: clip(c.code, 20), short: clip(c.short, 20), time: clip(c.time, 40),
+          topic: clip(c.topic, 300), minutes: Number(c.minutes) || null, sure: clip(c.sure, 300),
+        })),
+        pages,
+      };
+      await env.STORE.put("brief:" + rec.date, JSON.stringify(rec), { expirationTtl: BRIEF_TTL });
+      return json(200, { ok: true, date: rec.date, pages: pages.length, classes: rec.classes.length });
+    }
+
+    // GET /brief?from=YYYY-MM-DD -> the earliest brief on or after that day,
+    // so Friday night shows Monday's without the phone knowing the timetable.
+    if (path === "/brief" && method === "GET") {
+      const from = safeDate(url.searchParams.get("from"));
+      const list = await env.STORE.list({ prefix: "brief:" });
+      const dates = list.keys.map((k) => k.name.slice(6)).filter((d) => d >= from).sort();
+      if (!dates.length) return json(200, { none: true, from });
+      const rec = await getJson(env, "brief:" + dates[0], null);
+      if (!rec) return json(200, { none: true, from });
+      rec.ticks = await getJson(env, "brieftick:" + rec.date, {});
+      return json(200, rec);
+    }
+
+    // One tap per class, after the fact: got it / shaky / lost. Feeds the
+    // depth of the next pre-read on that course.
+    if (path === "/brief/tick" && method === "POST") {
+      const b = (await readJson(request)) || {};
+      if (!DATE_RE.test(String(b.date || ""))) return json(200, { ok: false, why: "no date" });
+      const v = ["got", "shaky", "lost", ""].includes(b.tick) ? b.tick : "";
+      const ticks = await getJson(env, "brieftick:" + b.date, {});
+      const code = clip(b.code, 20);
+      if (v) ticks[code] = { tick: v, at: new Date().toISOString() }; else delete ticks[code];
+      await env.STORE.put("brieftick:" + b.date, JSON.stringify(ticks), { expirationTtl: BRIEF_TTL });
+      return json(200, { ok: true, ticks });
     }
 
     return json(404, { error: "no such route" });

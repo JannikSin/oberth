@@ -28,6 +28,7 @@ import { el, esc, mast, zone, empty, footer, K, lsGet, lsSet, todayIso, nowIso, 
 import { queueNote, uploadEnqueue, syncStamp, uploadStatus } from "../../sync.js";
 import { keepAwake } from "../lib/awake.js";
 import { openMic, describeStream } from "../mic.js";
+import { briefCard } from "./brief.js";
 
 const logKey = (d) => K("log." + d);
 const readLog = (d) => lsGet(logKey(d), []);
@@ -52,7 +53,7 @@ const BOOKS = [
     placeholder: "How did today actually go? What took longer than it should have, what is working, what do you want to keep doing?" },
 ];
 
-export function open() {
+export function open(parts) {
   const date = todayIso();
   const wrap = document.createElement("div");
 
@@ -61,6 +62,10 @@ export function open() {
   // and is not owed, so the line says what is actually asked for.
   wrap.appendChild(mast("Tonight", "read the books, then say what you make of them",
                         "logged", String(done.length)));
+
+  // The night-before pre-read sits above the notebooks: the phone push lands
+  // on #/tonight/tomorrow and opens it.
+  wrap.appendChild(briefCard((parts || [])[1] === "tomorrow"));
 
   const lanes = el("div", { class: "lanes" });
   BOOKS.forEach((b) => lanes.appendChild(lane(b, date)));
